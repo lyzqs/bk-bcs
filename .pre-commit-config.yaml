@@ -6,5 +6,5 @@ repos:
     hooks:
       - id: go-fmt
         files: "^bcs-services/cluster-resources/pkg/"
-      - id: go-lint
+      - id: golangci-lint
         files: "^bcs-services/cluster-resources/pkg/"
