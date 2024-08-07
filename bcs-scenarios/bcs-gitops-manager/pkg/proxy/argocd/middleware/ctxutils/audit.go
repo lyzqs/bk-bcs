@@ -16,6 +16,7 @@ package ctxutils
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
@@ -92,6 +93,8 @@ const (
 	SecretUpdate AuditAction = "SecretUpdate"
 	// SecretDelete defines the secret delete action
 	SecretDelete AuditAction = "SecretDelete"
+	// SecretView defines the secret view action
+	SecretView AuditAction = "SecretView"
 	// SecretRollback defines the secret rollback action
 	SecretRollback AuditAction = "SecretRollback"
 )
@@ -103,6 +106,9 @@ func SetAuditMessage(r *http.Request, audit *dao.UserAudit) *http.Request {
 	audit.Client = user.ClientID
 	audit.RequestID = RequestID(r.Context())
 	audit.RequestURI = r.URL.RequestURI()
+	if len(audit.RequestURI) > 256 {
+		audit.RequestURI = audit.RequestURI[:256]
+	}
 	audit.RequestMethod = r.Method
 	audit.SourceIP = getRequestSourceIP(r)
 	audit.UserAgent = r.UserAgent()
@@ -145,6 +151,10 @@ func SaveAuditMessage(ctx context.Context, auditResp *AuditResp) {
 		userAudit.Status = string(AuditSuccess)
 	}
 	userAudit.ErrMsg = auditResp.ErrMsg
+	// prevent gzip message
+	if strings.Contains(userAudit.ErrMsg, "\x8B") {
+		userAudit.ErrMsg = ""
+	}
 	userAudit.StartTime = auditResp.Start
 	userAudit.EndTime = auditResp.End
 	if err := dao.GlobalDB().SaveAuditMessage(userAudit); err != nil {
@@ -163,13 +173,17 @@ func saveBCSAudit(userAudit *dao.UserAudit) {
 		StartTime: userAudit.StartTime,
 		EndTime:   userAudit.EndTime,
 	}
+	resourceData := userAudit.ResourceData
+	if len(resourceData) > 1024 {
+		resourceData = "too long no need save"
+	}
 	auditResource := audit.Resource{
 		ProjectCode:  userAudit.Project,
 		ResourceType: audit.ResourceTypeGitOps,
 		ResourceID:   userAudit.ResourceType,
 		ResourceName: userAudit.ResourceName,
 		ResourceData: map[string]any{
-			"data": userAudit.ResourceData,
+			"data": resourceData,
 		},
 	}
 	auditResult := audit.ActionResult{

@@ -215,8 +215,8 @@ func (c *checker) CheckRepoCreate(ctx context.Context, repo *v1alpha1.Repository
 		return statusCode, errors.Wrapf(err, "get project permission failed")
 	}
 	if v := permits[projectID]; v == nil || !v[ProjectViewRSAction] {
-		return http.StatusForbidden, errors.Errorf("user not have '%s/%s' permission",
-			repo.Project, ProjectViewRSAction)
+		return http.StatusForbidden, errors.Errorf("user '%s' not have '%s/%s' permission",
+			ctxutils.User(ctx).GetUser(), repo.Project, ProjectViewRSAction)
 	}
 	return http.StatusOK, nil
 }
@@ -271,8 +271,8 @@ func (c *checker) UserAllPermissions(ctx context.Context, project string) ([]*Us
 		return nil, http.StatusInternalServerError, errors.Wrapf(err, "get project permission failed")
 	}
 	if v := allPermits[projectID]; v == nil || !v[ProjectViewRSAction] {
-		return nil, http.StatusBadRequest, errors.Errorf("user not have project_view "+
-			"permission for project '%s'", project)
+		return nil, http.StatusBadRequest, errors.Errorf("user '%s' not have project_view "+
+			"permission for project '%s'", ctxutils.User(ctx).GetUser(), project)
 	}
 
 	permitType := []RSType{ProjectRSType, ClusterRSType, RepoRSType, AppRSType, AppSetRSType}
@@ -297,11 +297,12 @@ func (c *checker) checkSingleResourcePermission(ctx context.Context, project str
 			action)
 	}
 	if _, ok := permit.ResourcePerms[resource]; !ok {
-		return nil, http.StatusBadRequest, errors.Errorf("not have permission for resource '%s'", resource)
+		return nil, http.StatusBadRequest, errors.Errorf("user '%s' not have permission for resource '%s'",
+			ctxutils.User(ctx).GetUser(), resource)
 	}
 	if !permit.ResourcePerms[resource][action] {
-		return nil, http.StatusForbidden, errors.Errorf("user not have '%s' permission for resource '%s - %s'",
-			action, string(resourceType), resource)
+		return nil, http.StatusForbidden, errors.Errorf("user '%s' not have '%s' permission for resource '%s/%s'",
+			ctxutils.User(ctx).GetUser(), action, string(resourceType), resource)
 	}
 	if len(resources) != 1 {
 		return nil, http.StatusInternalServerError, errors.Errorf("not get project when query permission")
@@ -329,7 +330,8 @@ func (c *checker) QueryUserPermissions(ctx context.Context, project string, rsTy
 		return nil, nil, http.StatusInternalServerError, errors.Wrapf(err, "get project permission failed")
 	}
 	if v := projPermits[projectID]; v == nil || !v[ProjectViewRSAction] {
-		return nil, nil, statusCode, errors.Errorf("not have project_view permission for project")
+		return nil, nil, statusCode, errors.Errorf("user '%s' not have project_view permission for project",
+			user.GetUser())
 	}
 	return c.queryUserPermissionSingleType(ctx, argoProject, rsType, rsNames, projPermits[projectID])
 }
@@ -518,7 +520,7 @@ func (c *checker) buildClusterNSForQueryByApp(ctx context.Context, project strin
 			return nil, nil, nil, errors.Wrapf(err, "get cluster '%s' failed", clsServer)
 		}
 		if argoCluster == nil {
-			return nil, nil, nil, errors.Errorf("cluster '%s' not found", clsServer)
+			continue
 		}
 		clusterServerNameMap[clsServer] = argoCluster.Name
 	}
@@ -638,13 +640,8 @@ func (c *checker) queryUserResourceForAppSets(ctx context.Context, projPermits m
 		},
 		ResourcePerms: make(map[string]map[RSAction]bool),
 	}
-	clusterCreate, err := c.getBCSClusterCreatePermission(ctx, common.GetBCSProjectID(argoProj.Annotations))
-	if err != nil {
-		return nil, nil, http.StatusInternalServerError, errors.Wrapf(err, "check cluster_create permission failed")
-	}
-	// 具备 cluster_create 权限用户默认具备操作 appset 权限
 	result.ActionPerms[AppSetUpdateRSAction] = projPermits[ProjectEditRSAction]
-	result.ActionPerms[AppSetDeleteRSAction] = clusterCreate
+	result.ActionPerms[AppSetDeleteRSAction] = projPermits[ProjectEditRSAction]
 
 	// 获取所有的 appset
 	appSetList, err := c.store.ListApplicationSets(ctx, &appsetpkg.ApplicationSetListQuery{
@@ -662,7 +659,7 @@ func (c *checker) queryUserResourceForAppSets(ctx context.Context, projPermits m
 		}
 		result.ResourcePerms[item.Name] = map[RSAction]bool{
 			AppSetViewRSAction:   true,
-			AppSetDeleteRSAction: clusterCreate,
+			AppSetDeleteRSAction: projPermits[ProjectEditRSAction],
 			// NOTE: 暂时维持 ProjectEdit 权限
 			AppSetUpdateRSAction: projPermits[ProjectEditRSAction],
 		}
@@ -715,7 +712,8 @@ func (c *checker) updateAppSetPermissions(ctx context.Context, project string,
 		return http.StatusInternalServerError, errors.Wrapf(err, "check cluster_create permission failed")
 	}
 	if !clusterCreate {
-		return http.StatusForbidden, errors.Errorf("user not have cluster_create permission")
+		return http.StatusForbidden, errors.Errorf("user '%s' not have cluster_create permission",
+			ctxutils.User(ctx).GetUser())
 	}
 
 	appSets := c.store.AllApplicationSets()
@@ -742,34 +740,22 @@ func (c *checker) updateAppSetPermissions(ctx context.Context, project string,
 	if len(notFoundAppSet) != 0 {
 		return http.StatusBadRequest, fmt.Errorf("appset '%v' not found", notFoundAppSet)
 	}
+
 	// 添加权限
-	permissions := make([]*dao.UserPermission, 0)
-	for _, appSet := range resultAppSets {
-		proj := appSet.Spec.Template.Spec.Project
-		for _, user := range req.Users {
-			for _, action := range req.ResourceActions {
-				permissions = append(permissions, &dao.UserPermission{
-					Project:        proj,
-					User:           user,
-					ResourceType:   string(AppSetRSType),
-					ResourceName:   appSet.Name,
-					ResourceAction: action,
-				})
-			}
-		}
-	}
 	errs := make([]string, 0)
-	for _, permission := range permissions {
-		if err = c.db.CreateUserPermission(permission); err != nil {
-			errMsg := fmt.Sprintf("create permission for user '%s' with resource '%s/%s/%s' failed: %s",
-				permission.User, permission.ResourceType, permission.ResourceName,
-				permission.ResourceAction, err.Error())
+	for _, appSet := range resultAppSets {
+		for _, action := range req.ResourceActions {
+			err = c.db.UpdateResourcePermissions(project, string(AppSetRSType), appSet.Name, action, req.Users)
+			if err == nil {
+				blog.Infof("RequestID[%s] update resource '%s/%s' permissions success", ctxutils.RequestID(ctx),
+					string(AppSetRSType), appSet.Name)
+				continue
+			}
+
+			errMsg := fmt.Sprintf("update resource '%s/%s' permissions failed", string(AppSetRSType), appSet.Name)
 			errs = append(errs, errMsg)
-			blog.Errorf("RequestID[%s] create permission failed: %s", ctxutils.RequestID(ctx), errMsg)
-			continue
+			blog.Errorf("RequestID[%s] update permission failed: %s", ctxutils.RequestID(ctx), errMsg)
 		}
-		blog.Infof("RequestID[%s] create permission for user '%s' with resource '%s/%s/%s' success",
-			permission.User, permission.ResourceType, permission.ResourceName, permission.ResourceAction)
 	}
 	if len(errs) != 0 {
 		return http.StatusInternalServerError, fmt.Errorf("create permission with multiple error: %v", errs)

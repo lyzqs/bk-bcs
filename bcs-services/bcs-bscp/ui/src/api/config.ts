@@ -7,6 +7,7 @@ import {
 } from '../../types/config';
 import { IVariableEditParams } from '../../types/variable';
 import { ICommonQuery } from '../../types/index';
+import { localT } from '../i18n';
 
 // 配置文件版本下脚本配置接口可能会返回null，做数据兼容处理
 export const getDefaultConfigScriptData = () => ({
@@ -174,6 +175,28 @@ export const downloadConfigContent = (bizId: string, appId: number, signature: s
     .then((res) => res);
 
 /**
+ * 判断上传的配置文件是否已存在
+ * @param bizId 业务ID
+ * @param appId 应用ID
+ * @param data 配置内容
+ * @param signature 文件内容的SHA256值
+ * @returns
+ */
+export const getConfigUploadFileIsExist = (
+  bizId: string,
+  appId: number,
+  signature: string,
+) =>
+  http
+    .get(`/biz/${bizId}/content/metadata`, {
+      headers: {
+        'X-Bscp-App-Id': appId,
+        'X-Bkapi-File-Content-Id': signature,
+      },
+    })
+    .then((res) => res.data);
+
+/**
  * 创建配置版本
  * @param bizId 业务ID
  * @param appId 应用ID
@@ -230,7 +253,7 @@ export const getConfigVersionList = (bizId: string, appId: number, params: IConf
     res.data.details.forEach((item: IConfigVersion) => {
       const defaultGroup = item.status.released_groups.find((group) => group.id === 0);
       if (defaultGroup) {
-        defaultGroup.name = '全部实例';
+        defaultGroup.name = localT('全部实例');
       }
     });
     return res;

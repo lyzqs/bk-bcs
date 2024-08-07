@@ -159,6 +159,20 @@ func (t *TemplateVersionAction) List(
 	sort.Sort(entity.VersionsSortByVersion(templateVersion))
 
 	m := make([]map[string]interface{}, 0)
+	// append draft version
+	if tmp.IsDraft {
+		draftVersion := &entity.TemplateVersion{
+			ProjectCode:   tmp.ProjectCode,
+			TemplateSpace: tmp.TemplateSpace,
+			TemplateName:  tmp.Name,
+			Version:       tmp.DraftVersion,
+			Content:       tmp.DraftContent,
+			Creator:       tmp.Updator,
+			CreateAt:      tmp.UpdateAt,
+			Draft:         true,
+		}
+		m = append(m, draftVersion.ToMap())
+	}
 	for _, value := range templateVersion {
 		if value.Version == tmp.Version {
 			value.Latest = true
@@ -232,13 +246,22 @@ func (t *TemplateVersionAction) Create(ctx context.Context, req *clusterRes.Crea
 		return "", err
 	}
 
+	updateTemplate := make(entity.M, 0)
+	// 如果草稿态的情况下，创建版本解除草稿态
+	if tmp.IsDraft {
+		updateTemplate["isDraft"] = false
+		updateTemplate["draftVersion"] = ""
+		updateTemplate["draftContent"] = ""
+	}
+
 	// update template lastet version
 	if tmp.VersionMode == int(clusterRes.VersionMode_LatestUpdateTime) {
-		updateTemplate := entity.M{
-			"version":      req.GetVersion(),
-			"resourceType": parser.GetResourceTypesFromManifest(req.GetContent()),
-			"updator":      userName,
-		}
+		updateTemplate["version"] = req.GetVersion()
+		updateTemplate["resourceType"] = parser.GetResourceTypesFromManifest(req.GetContent())
+		updateTemplate["updator"] = userName
+	}
+
+	if len(updateTemplate) != 0 {
 		if err = t.model.UpdateTemplate(ctx, req.GetTemplateID(), updateTemplate); err != nil {
 			return "", err
 		}

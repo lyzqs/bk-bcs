@@ -173,7 +173,7 @@
     let updateString = replaceVal.value;
     updateString = updateString.replace('{{ .Bk_Bscp_Variable_BkBizId }}', bkBizId.value);
     updateString = updateString.replace('{{ .Bk_Bscp_Variable_ServiceName }}', basicInfo!.serviceName.value);
-    replaceVal.value = updateString.replaceAll('{{ .Bk_Bscp_Variable_FEED_ADDR }}', (window as any).FEED_ADDR);
+    replaceVal.value = updateString.replaceAll('{{ .Bk_Bscp_Variable_FEED_ADDR }}', (window as any).GRPC_ADDR);
   };
   const updateVariables = () => {
     variables.value = [
@@ -298,11 +298,11 @@
     }
   }
   .preview-component {
-    height: 334px;
-    padding: 16px 0 0;
+    height: 336px;
+    padding: 16px 10px;
     background-color: #f5f7fa;
     &--kvcmd {
-      height: 276px;
+      height: 279px;
     }
   }
 </style>

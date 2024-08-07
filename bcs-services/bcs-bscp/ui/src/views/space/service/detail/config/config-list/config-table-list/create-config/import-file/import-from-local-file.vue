@@ -34,14 +34,18 @@
             </div>
             <TextFill class="file-icon" />
             <div class="file-content">
-              <div class="name">{{ fileItem.file.name }}</div>
+              <bk-overflow-title type="tips" class="name">
+                <div>{{ fileItem.file.name }}</div>
+              </bk-overflow-title>
               <div v-if="fileItem.status !== 'success' && fileItem.status !== 'fail'" class="progress">
                 <bk-progress
                   :percent="fileItem.progress"
                   :theme="fileItem.status === 'fail' ? 'danger' : 'primary'"
                   size="small" />
               </div>
-              <div v-else-if="fileItem.status === 'fail'" class="error-message">{{ fileItem.errorMessage }}</div>
+              <bk-overflow-title v-else-if="fileItem.status === 'fail'" type="tips" class="error-message">
+                <div>{{ fileItem.errorMessage }}</div>
+              </bk-overflow-title>
             </div>
             <Del class="del-icon" @click="handleDeleteFile(fileItem.file.name)" />
           </div>
@@ -107,8 +111,7 @@
       if (fileList.value.some((fileItem) => fileItem.status === 'decompressing')) {
         const decompressingFile = fileList.value.find((file) => file.status === 'decompressing');
         const isCompressionFile = handleCheckIsCompressedFile(decompressingFile!.file.name);
-        if (isCompressionFile) {
-          console.log(1);
+        if (isDecompression.value && isCompressionFile) {
           emits('decompressing', true);
         } else {
           emits('fileProcessing', true);
@@ -123,7 +126,7 @@
 
   const handleFileUpload = async (option: { file: File }) => {
     const {
-      RESOURCE_LIMIT: { MaxUploadContentLength, MaxUploadSingleContentLength },
+      RESOURCE_LIMIT: { MaxUploadContentLength, maxFileSize },
     } = spaceFeatureFlags.value;
     const fileSize = option.file.size / 1024 / 1024;
     const isCompressionFile = handleCheckIsCompressedFile(option.file.name);
@@ -136,19 +139,19 @@
         });
         return;
       }
-      if (!isCompressionFile && fileSize > MaxUploadSingleContentLength) {
+      if (!isCompressionFile && fileSize > maxFileSize) {
         Message({
           theme: 'error',
-          message: t('单文件大小不能超过{n}M', { n: MaxUploadSingleContentLength }),
+          message: t('单文件大小不能超过{n}M', { n: maxFileSize }),
         });
         return;
       }
     }
 
-    if (!isDecompression.value && fileSize > MaxUploadSingleContentLength) {
+    if (!isDecompression.value && fileSize > maxFileSize) {
       Message({
         theme: 'error',
-        message: t('单文件大小不能超过{n}M', { n: MaxUploadSingleContentLength }),
+        message: t('单文件大小不能超过{n}M', { n: maxFileSize }),
       });
       return;
     }
@@ -218,6 +221,7 @@
   // 判断是否是压缩包
   const handleCheckIsCompressedFile = (filename: string) => {
     const ext = filename.split('.').pop()!.toLowerCase();
+    console.log(ext);
     return ['zip', 'rar', 'tar', 'gz', 'tgz'].includes(ext);
   };
 </script>
@@ -308,7 +312,7 @@
         width: 100%;
         height: 20px;
         .name {
-          max-width: 360px;
+          max-width: 200px;
           margin-right: 4px;
           color: #63656e;
           white-space: nowrap;
@@ -320,6 +324,7 @@
           color: #ff5656;
           right: 10px;
           top: 0;
+          max-width: 200px;
         }
         :deep(.bk-progress) {
           position: absolute;

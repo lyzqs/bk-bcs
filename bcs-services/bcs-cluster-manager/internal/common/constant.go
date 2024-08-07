@@ -213,6 +213,9 @@ const (
 	// VclusterNetworkMode xxx
 	VclusterNetworkMode = "vclusterMode"
 
+	// ClusterOsType cluster os type (linux,windows)
+	ClusterOsType = "osType"
+
 	// ClusterManager xxx
 	ClusterManager = "bcs-cluster-manager"
 
@@ -479,6 +482,8 @@ const (
 	BcsErrClusterManagerCheckKubeConnErr = bcscommon.BCSErrClusterManager + 41
 	// BcsErrClusterManagerClsMgrCloudErr cloud config error
 	BcsErrClusterManagerClsMgrCloudErr = bcscommon.BCSErrClusterManager + 42
+	// BcsErrClusterManagerCheckCloudResourceQuotaErr cloud check resource quota error
+	BcsErrClusterManagerCheckCloudResourceQuotaErr = bcscommon.BCSErrClusterManager + 43
 )
 
 // ClusterIDRange for generate clusterID range

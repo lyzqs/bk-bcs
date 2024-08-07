@@ -266,6 +266,28 @@ export const downloadTemplateContent = (biz_id: string, templateSpaceId: number,
     .then((res) => res);
 
 /**
+ * 判断上传的配置文件是否已存在
+ * @param bizId 业务ID
+ * @param appId 应用ID
+ * @param data 配置内容
+ * @param signature 文件内容的SHA256值
+ * @returns
+ */
+export const getTemplateUploadFileIsExist = (
+  bizId: string,
+  templateSpaceId: number,
+  signature: string,
+) =>
+  http
+    .get(`/biz/${bizId}/content/metadata`, {
+      headers: {
+        'X-Bscp-Template-Space-Id': templateSpaceId,
+        'X-Bkapi-File-Content-Id': signature,
+      },
+    })
+    .then((res) => res.data);
+
+/**
  * 批量删除模板
  * @param biz_id 业务ID
  * @param template_space_id 空间ID
@@ -632,10 +654,16 @@ export const importTemplateFile = (
  * @param configData 配置列表
  * @returns
  */
-export const importTemplateBatchAdd = (biz_id: string, template_space_id: number, configData: any) =>
+export const importTemplateBatchAdd = (
+  biz_id: string,
+  template_space_id: number,
+  configData: any,
+  template_set_ids: number[],
+) =>
   http
     .post(`/config/biz/${biz_id}/template_spaces/${template_space_id}/templates/batch_upsert_templates`, {
       items: configData,
+      template_set_ids,
     })
     .then((res) => res.data);
 
