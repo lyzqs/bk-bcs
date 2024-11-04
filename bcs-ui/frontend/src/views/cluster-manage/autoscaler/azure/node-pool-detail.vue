@@ -69,7 +69,7 @@
             {{scalingModeMap[nodePoolData.autoScaling.scalingMode]}}
           </bk-form-item>
           <bk-form-item :label="$t('cluster.ca.nodePool.label.system')">
-            {{clusterOS || '--'}}
+            {{nodeOS || '--'}}
           </bk-form-item>
           <bk-form-item :label="$t('cluster.ca.nodePool.create.containerRuntime.title')">
             {{`${clusterData.clusterAdvanceSettings
@@ -101,9 +101,6 @@
               @click="showDataDisks = true">{{$t('generic.button.view')}}</bk-button>
           </bk-form-item>
         </bk-form>
-        <div class="mt20 mb10 panel-header">
-          <span class="title">{{$t('cluster.nodeTemplate.kubelet.title.argsConfig')}}</span>
-        </div>
         <bcs-tab class="mt20">
           <bcs-tab-panel :label="$t('cluster.ca.nodePool.create.scaleInitConfig.userScript')" name="scaleOutPostAction">
             <UserAction
@@ -208,7 +205,7 @@
 <script lang="ts">
 import { computed, defineComponent, onMounted, ref } from 'vue';
 
-import UserAction from '../user-action.vue';
+import UserAction from '../components/user-action.vue';
 
 import { nodemanCloudList } from '@/api/base';
 import { cloudsZones } from '@/api/modules/cluster-manager';
@@ -322,6 +319,7 @@ export default defineComponent({
     ]);
 
     // 获取详情
+    const nodeOS = computed(() => nodePoolData.value?.nodeOS);
     const getNodeGroupDetail = async () => {
       nodePoolData.value = await $store.dispatch('clustermanager/nodeGroupDetail', {
         $nodeGroupID: props.nodeGroupID,
@@ -431,6 +429,7 @@ export default defineComponent({
       zoneLoading,
       cloudAreaLoading,
       cloudAreaName,
+      nodeOS,
     };
   },
 });

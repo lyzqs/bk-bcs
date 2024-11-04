@@ -14,10 +14,12 @@ package table
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/errf"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/validator"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/i18n"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/kit"
 )
 
 // App defines an application's detail information
@@ -54,20 +56,20 @@ func (a *App) ResType() string {
 }
 
 // ValidateCreate validate app's info when created.
-func (a *App) ValidateCreate() error {
+func (a *App) ValidateCreate(kit *kit.Kit) error {
 	if a.ID != 0 {
-		return errors.New("id can not be set")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "id can not be set"))
 	}
 
 	if a.BizID <= 0 {
-		return errors.New("invalid biz id")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "invalid biz id"))
 	}
 
 	if a.Spec == nil {
-		return errors.New("invalid spec, is nil")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "invalid spec, is nil"))
 	}
 
-	if err := a.Spec.ValidateCreate(); err != nil {
+	if err := a.Spec.ValidateCreate(kit); err != nil {
 		return err
 	}
 
@@ -83,20 +85,20 @@ func (a *App) ValidateCreate() error {
 }
 
 // ValidateUpdate validate app's info when update.
-func (a *App) ValidateUpdate(configType ConfigType) error {
+func (a *App) ValidateUpdate(kit *kit.Kit, configType ConfigType) error {
 	if a.ID <= 0 {
-		return errors.New("id is not set")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "id can not be set"))
 	}
 
 	if a.BizID <= 0 {
-		return errors.New("biz id not set")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "invalid biz id"))
 	}
 
 	if a.Spec == nil {
-		return errors.New("invalid spec, is nil")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "invalid spec, is nil"))
 	}
 
-	if err := a.Spec.ValidateUpdate(configType); err != nil {
+	if err := a.Spec.ValidateUpdate(kit, configType); err != nil {
 		return err
 	}
 
@@ -130,75 +132,76 @@ type AppSpec struct {
 	Name string `json:"name" gorm:"column:name"`
 	// ConfigType defines which type is this configuration, different type has the
 	// different ways to be consumed.
-	ConfigType ConfigType `json:"config_type" gorm:"column:config_type"`
-	Memo       string     `json:"memo" gorm:"column:memo"`
-	Alias      string     `json:"alias" gorm:"alias"`
-	DataType   DataType   `json:"data_type" gorm:"data_type"`
+	ConfigType       ConfigType `json:"config_type" gorm:"column:config_type"`
+	Memo             string     `json:"memo" gorm:"column:memo"`
+	Alias            string     `json:"alias" gorm:"alias"`
+	DataType         DataType   `json:"data_type" gorm:"data_type"`
+	LastConsumedTime *time.Time `json:"last_consumed_time" gorm:"column:last_consumed_time"`
 }
 
 // ValidateCreate validate spec when created.
-func (as *AppSpec) ValidateCreate() error {
+func (as *AppSpec) ValidateCreate(kit *kit.Kit) error {
 	if as == nil {
-		return errors.New("app spec is nil")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "app spec is nil"))
 	}
 
-	if err := validator.ValidateAppName(as.Name); err != nil {
+	if err := validator.ValidateAppName(kit, as.Name); err != nil {
 		return err
 	}
 
-	if err := validator.ValidateAppAlias(as.Alias); err != nil {
+	if err := validator.ValidateAppAlias(kit, as.Alias); err != nil {
 		return err
 	}
 
-	if err := as.ConfigType.Validate(); err != nil {
+	if err := as.ConfigType.Validate(kit); err != nil {
 		return err
 	}
 
-	if err := validator.ValidateMemo(as.Memo, false); err != nil {
+	if err := validator.ValidateMemo(kit, as.Memo, false); err != nil {
 		return err
 	}
 
 	switch as.ConfigType {
 	case File:
 	case KV:
-		if err := as.DataType.ValidateApp(); err != nil {
+		if err := as.DataType.ValidateApp(kit); err != nil {
 			return err
 		}
 	case Table:
 	default:
-		return fmt.Errorf("unknown config type: %s", as.ConfigType)
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "unknown config type: %s", as.ConfigType))
 	}
 
 	return nil
 }
 
 // ValidateUpdate validate spec when updated.
-func (as *AppSpec) ValidateUpdate(configType ConfigType) error {
+func (as *AppSpec) ValidateUpdate(kit *kit.Kit, configType ConfigType) error {
 	if as == nil {
-		return errors.New("app spec is nil")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "app spec is nil"))
 	}
 
-	if err := validator.ValidateAppName(as.Name); err != nil {
+	if err := validator.ValidateAppName(kit, as.Name); err != nil {
 		return err
 	}
 
 	if len(as.ConfigType) > 0 {
-		return errors.New("app's type can not be updated")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "app's type can not be updated"))
 	}
 
-	if err := validator.ValidateMemo(as.Memo, false); err != nil {
+	if err := validator.ValidateMemo(kit, as.Memo, false); err != nil {
 		return err
 	}
 
 	switch configType {
 	case File:
 	case KV:
-		if err := as.DataType.ValidateApp(); err != nil {
+		if err := as.DataType.ValidateApp(kit); err != nil {
 			return err
 		}
 	case Table:
 	default:
-		return fmt.Errorf("unknown config type: %s", as.ConfigType)
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "unknown config type: %s", as.ConfigType))
 	}
 
 	return nil
@@ -217,14 +220,14 @@ const (
 type ConfigType string
 
 // Validate the config type is supported or not.
-func (c ConfigType) Validate() error {
+func (c ConfigType) Validate(kit *kit.Kit) error {
 	switch c {
 	case KV:
 	case File:
 	case Table:
-		return errors.New("not support table config type for now")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "not support table config type for now"))
 	default:
-		return fmt.Errorf("unsupported config type: %s", c)
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "unsupported config type: %s", c))
 	}
 
 	return nil
@@ -241,11 +244,11 @@ const (
 type AppReloadType string
 
 // Validate app reload type
-func (rt AppReloadType) Validate() error {
+func (rt AppReloadType) Validate(kit *kit.Kit) error {
 	switch rt {
 	case ReloadWithFile:
 	default:
-		return fmt.Errorf("unsupported app reload type: %s", rt)
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "unsupported app reload type: %s", rt))
 	}
 
 	return nil
@@ -284,10 +287,12 @@ const (
 	KvYAML DataType = "yaml"
 	// KvXml is the type for xml kv
 	KvXml DataType = "xml"
+	// KvSecret is the type for secret kv
+	KvSecret DataType = "secret"
 )
 
 // ValidateApp the kvType and value match
-func (k DataType) ValidateApp() error {
+func (k DataType) ValidateApp(kit *kit.Kit) error {
 	switch k {
 	case KvAny:
 	case KvStr:
@@ -296,8 +301,9 @@ func (k DataType) ValidateApp() error {
 	case KvJson:
 	case KvYAML:
 	case KvXml:
+	case KvSecret:
 	default:
-		return errors.New("invalid data-type")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "invalid data-type"))
 	}
 	return nil
 }

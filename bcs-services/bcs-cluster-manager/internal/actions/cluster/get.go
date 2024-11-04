@@ -269,7 +269,7 @@ func (ca *CheckNodeAction) checkNodesInCluster() error { // nolint
 		ca.nodeResult = make(map[string]*cmproto.NodeResult)
 	}
 	// get all masterIPs
-	masterIPs := getAllMasterIPs(ca.model)
+	masterIPs := GetAllMasterIPs(ca.model)
 
 	var (
 		barrier = utils.NewRoutinePool(10)
@@ -301,7 +301,7 @@ func (ca *CheckNodeAction) checkNodesInCluster() error { // nolint
 	return nil
 }
 
-func (ca *CheckNodeAction) getNodeResultByNodeIP(nodeIP string, masterMapIPs map[string]clusterInfo) (
+func (ca *CheckNodeAction) getNodeResultByNodeIP(nodeIP string, masterMapIPs map[string]ClusterInfo) (
 	*cmproto.NodeResult, error) {
 	nodeResult := &cmproto.NodeResult{
 		IsExist:     false,
@@ -312,8 +312,8 @@ func (ca *CheckNodeAction) getNodeResultByNodeIP(nodeIP string, masterMapIPs map
 	// check if exist masterIPs
 	if cls, ok := masterMapIPs[nodeIP]; ok {
 		nodeResult.IsExist = true
-		nodeResult.ClusterID = cls.clusterID
-		nodeResult.ClusterName = cls.clusterName
+		nodeResult.ClusterID = cls.ClusterID
+		nodeResult.ClusterName = cls.ClusterName
 
 		return nodeResult, nil
 	}
@@ -334,9 +334,10 @@ func (ca *CheckNodeAction) getNodeResultByNodeIP(nodeIP string, masterMapIPs map
 	// only handle not ca nodes
 	if len(node.ClusterID) != 0 && node.NodeGroupID == "" && node.Status == common.StatusRunning {
 		cluster, err := ca.model.GetCluster(ca.ctx, node.ClusterID)
-		if err == nil {
-			nodeResult.ClusterName = cluster.GetClusterName()
+		if err != nil {
+			return nodeResult, nil
 		}
+		nodeResult.ClusterName = cluster.GetClusterName()
 
 		// check node exist in cluster
 		if cluster.Status == common.StatusDeleted || !ca.checkNodeIPInCluster(node.ClusterID, node.InnerIP) {

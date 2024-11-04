@@ -14,11 +14,15 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/i18n"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/kit"
 )
 
 // GetIntList 获取Int列表, 解析BizID时使用
@@ -220,7 +224,7 @@ type CIUniqueKey struct {
 // DetectFilePathConflicts 检测文件路径冲突
 // 示例 /a 和 /a 两者路径+名称全等忽略
 // 示例 /a 和 /a/1.txt 两者同级下出现同名的文件夹和文件会视为错误
-func DetectFilePathConflicts(a []CIUniqueKey, b []CIUniqueKey) error {
+func DetectFilePathConflicts(kt *kit.Kit, a []CIUniqueKey, b []CIUniqueKey) error {
 	for _, v1 := range a {
 		path1 := path.Join(v1.Path, v1.Name)
 		for _, v2 := range b {
@@ -229,7 +233,7 @@ func DetectFilePathConflicts(a []CIUniqueKey, b []CIUniqueKey) error {
 				continue
 			}
 			if strings.HasPrefix(path1+"/", path2+"/") || strings.HasPrefix(path2+"/", path1+"/") {
-				return fmt.Errorf("%s and %s path file conflict", path2, path1)
+				return errors.New(i18n.T(kt, "%s and %s path file conflict", path2, path1))
 			}
 		}
 	}
@@ -309,4 +313,26 @@ func BytesToHumanReadable(bytes uint64) string {
 	default:
 		return fmt.Sprintf("%d bytes", bytes)
 	}
+}
+
+// SplitPathAndName 检查并拆分路径和文件名
+func SplitPathAndName(remainingPath string) (string, string) {
+	// 如果路径不以 "/" 开头，加上 "/"
+	if !strings.HasPrefix(remainingPath, "/") {
+		remainingPath = "/" + remainingPath
+	}
+
+	// 查找最后一个 "/" 的位置，并拆分路径和文件名
+	lastSlashIndex := strings.LastIndex(remainingPath, "/")
+	if lastSlashIndex != -1 && lastSlashIndex < len(remainingPath)-1 {
+		path := remainingPath[:lastSlashIndex+1]
+		name := remainingPath[lastSlashIndex+1:]
+		return path, name
+	}
+	return remainingPath, ""
+}
+
+// ConvertBackslashes 用于将字符串中的反斜杠转换为正斜杠
+func ConvertBackslashes(input string) string {
+	return strings.ReplaceAll(input, `\`, "/")
 }

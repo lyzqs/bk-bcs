@@ -15,6 +15,7 @@ package template
 
 import (
 	"context"
+	"path"
 
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/odm/operator"
 	"gopkg.in/yaml.v2"
@@ -32,6 +33,7 @@ import (
 	projectAuth "github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/iam/perm/resource/project"
 	res "github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource"
 	cli "github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource/client"
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource/constants"
 	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource/form/parser"
 	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource/perm"
 	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/store"
@@ -199,7 +201,7 @@ func (t *TemplateAction) List(ctx context.Context, templateSpaceID string) ([]ma
 	for _, value := range template {
 		mm := value.ToMap()
 		for _, v := range versions {
-			if v.Version == value.Version {
+			if v.Version == value.Version && v.TemplateName == value.Name {
 				mm["versionID"] = v.ID.Hex()
 			}
 		}
@@ -250,6 +252,7 @@ func (t *TemplateAction) Create(ctx context.Context, req *clusterRes.CreateTempl
 	// 非草稿状态下：创建模板文件版本
 	versionID := ""
 	if !req.GetIsDraft() {
+		renderMode := constants.RenderMode(req.GetRenderMode())
 		// 创建顺序：templateVersion -> template
 		templateVersion := &entity.TemplateVersion{
 			ProjectCode:   p.Code,
@@ -257,8 +260,10 @@ func (t *TemplateAction) Create(ctx context.Context, req *clusterRes.CreateTempl
 			TemplateName:  req.GetName(),
 			TemplateSpace: templateSpace.Name,
 			Version:       req.GetVersion(),
+			EditFormat:    req.GetEditFormat(),
 			Content:       req.GetContent(),
 			Creator:       userName,
+			RenderMode:    renderMode.GetRenderMode(),
 		}
 		versionID, err = t.model.CreateTemplateVersion(ctx, templateVersion)
 		if err != nil {
@@ -283,6 +288,7 @@ func (t *TemplateAction) Create(ctx context.Context, req *clusterRes.CreateTempl
 	if req.GetIsDraft() {
 		template.DraftVersion = req.GetDraftVersion()
 		template.DraftContent = req.GetDraftContent()
+		template.DraftEditFormat = req.GetDraftEditFormat()
 	}
 
 	// 没有记录的情况下直接创建
@@ -344,14 +350,15 @@ func (t *TemplateAction) Update(ctx context.Context, req *clusterRes.UpdateTempl
 	}
 
 	updateTemplate := entity.M{
-		"name":         req.GetName(),
-		"description":  req.GetDescription(),
-		"updator":      userName,
-		"tags":         req.GetTags(),
-		"versionMode":  req.GetVersionMode(),
-		"isDraft":      req.GetIsDraft(),
-		"draftVersion": req.GetDraftVersion(),
-		"draftContent": req.GetDraftContent(),
+		"name":            req.GetName(),
+		"description":     req.GetDescription(),
+		"updator":         userName,
+		"tags":            req.GetTags(),
+		"versionMode":     req.GetVersionMode(),
+		"isDraft":         req.GetIsDraft(),
+		"draftVersion":    req.GetDraftVersion(),
+		"draftContent":    req.GetDraftContent(),
+		"draftEditFormat": req.GetDraftEditFormat(),
 	}
 	if req.GetVersionMode() == clusterRes.VersionMode_SpecifyVersion && req.GetVersion() != "" {
 		updateTemplate["version"] = req.GetVersion()
@@ -415,6 +422,12 @@ func (t *TemplateAction) CreateTemplateSet(ctx context.Context, req *clusterRes.
 	// 组装 chart
 	cht := buildChart(tmps, req, ctxkey.GetUsernameFromCtx(ctx))
 
+	// 校验chart helm语法是否正确
+	_, err = validAndFillChart(cht, req.GetValues())
+	if err != nil {
+		return err
+	}
+
 	// 上传 chart
 	err = helm.UploadChart(ctx, cht, p.Code, req.GetVersion(), req.GetForce())
 	if err != nil {
@@ -439,6 +452,7 @@ func getTemplateContents(ctx context.Context, model store.ClusterResourcesModel,
 			TemplateName:    vv.TemplateName,
 			TemplateVersion: vv.Version,
 			Content:         vv.Content,
+			RenderMode:      vv.RenderMode,
 		})
 	}
 	return templates, nil
@@ -481,18 +495,16 @@ func (t *TemplateAction) ListTemplateFileVariables(ctx context.Context,
 	})
 	vars := make([]map[string]interface{}, 0)
 	for _, v := range parseMultiTemplateFileVar(templates) {
-		readonly := false
 		value := ""
 		for _, vv := range clusterVars {
 			if vv.Key == v {
-				readonly = true
 				value = vv.Value
 			}
 		}
 		vars = append(vars, map[string]interface{}{
 			"key":      v,
 			"value":    value,
-			"readonly": readonly,
+			"readonly": false, // 默认可覆盖
 		})
 	}
 	return map[string]interface{}{"vars": vars}, nil
@@ -514,6 +526,18 @@ func (t *TemplateAction) PreviewTemplateFile(ctx context.Context, req *clusterRe
 	templates, err := getTemplateContents(ctx, t.model, req.GetTemplateVersions(), p.Code)
 	if err != nil {
 		return nil, err
+	}
+
+	// helm 语法模式 模板文件内容进行helm template 渲染, 简单语法模式自动跳过
+	content, errRender := renderTemplateForHelmMode(templates, req.GetValues())
+	if errRender != nil {
+		return map[string]interface{}{"items": []string{}, "error": errRender.Error()}, nil
+	}
+	for k, v := range templates {
+		helmPath := path.Join(v.TemplateSpace, v.TemplateName)
+		if _, ok := content[helmPath]; ok {
+			templates[k].Content = content[helmPath]
+		}
 	}
 
 	// render templates
@@ -574,6 +598,18 @@ func (t *TemplateAction) DeployTemplateFile(ctx context.Context, req *clusterRes
 		return nil, err
 	}
 
+	// helm 语法模式 模板文件内容进行helm template 渲染, 简单语法模式自动跳过
+	content, errRender := renderTemplateForHelmMode(templates, req.GetValues())
+	if errRender != nil {
+		return map[string]interface{}{"items": []string{}, "error": errRender.Error()}, nil
+	}
+	for k, v := range templates {
+		helmPath := path.Join(v.TemplateSpace, v.TemplateName)
+		if _, ok := content[helmPath]; ok {
+			templates[k].Content = content[helmPath]
+		}
+	}
+
 	// render templates
 	manifests, err := t.renderTemplates(ctx, templates, req.GetVariables(), req.GetNamespace())
 	if err != nil {
@@ -601,6 +637,17 @@ func (t *TemplateAction) DeployTemplateFile(ctx context.Context, req *clusterRes
 			return nil, err
 		}
 		_, err = cli.NewResClient(clusterConf, k8sRes).ApplyWithoutPerm(ctx, v, metav1.CreateOptions{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 更新最新部署版本及最新部署人
+	for _, v := range templates {
+		err := t.model.UpdateTemplateBySpaceAndName(ctx, p.Code, v.TemplateSpace, v.TemplateName, entity.M{
+			"latestDeployVersion": v.TemplateVersion,
+			"latestDeployer":      ctxkey.GetUsernameFromCtx(ctx),
+		})
 		if err != nil {
 			return nil, err
 		}

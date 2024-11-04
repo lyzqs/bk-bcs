@@ -868,6 +868,60 @@
         ]
       }
     },
+    "/clustermanager/v1/cloud/{cloudID}/recommendNodeGroupConf": {
+      "get": {
+        "summary": "创建集群时推荐的节点池配置",
+        "description": "创建集群时推荐的节点池配置",
+        "operationId": "ClusterManager_RecommendNodeGroupConf",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/clustermanagerRecommendNodeGroupConfResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cloudID",
+            "description": "云模版ID, 集群所属云进行流程管理",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "accountID",
+            "description": "accountID. 导入集群关联的cloud凭证信息, 可以为空; 当为空时, 可以通过cloud获取cloud凭证信息",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "region",
+            "description": "region. 集群所在地域",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "resourceGroupName",
+            "description": "resourceGroupName. AKS集群所属resource group",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterManager"
+        ]
+      }
+    },
     "/clustermanager/v1/cloudregion/{cloudID}": {
       "get": {
         "summary": "查询Cloud region列表",
@@ -1949,6 +2003,53 @@
         ]
       }
     },
+    "/clustermanager/v1/clouds/{cloudID}/serviceroles": {
+      "get": {
+        "summary": "查询awsCloud service role列表",
+        "description": "查询awsCloud service role列表",
+        "operationId": "ClusterManager_GetServiceRoles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/clustermanagerGetServiceRolesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cloudID",
+            "description": "云信息",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "accountID",
+            "description": "accountID. 云凭证ID",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "roleType",
+            "description": "roleType. aws service role类型, 可选值为cluster,nodeGroup",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterManager"
+        ]
+      }
+    },
     "/clustermanager/v1/clouds/{cloudID}/subnets": {
       "get": {
         "summary": "查询vpc子网列表",
@@ -2383,6 +2484,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "resourceGroupName",
+            "description": "resourceGroupName. Azure 资源组名称",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2786,6 +2894,14 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "all",
+            "description": "all. true时获取所有的集群信息,包括被软删除的集群; false时获取非DELETED状态的集群信息",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean"
           }
         ],
         "tags": [
@@ -5144,6 +5260,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "opUser",
+            "description": "opUser. 默认为空, 发起者筛选",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -5236,6 +5359,13 @@
           {
             "name": "operator",
             "description": "operator. 操作者(传参时获取该用户对应集群的权限信息,不传时仅获取集群列表信息)",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "bizId",
+            "description": "bizId. 项目关联的业务ID，主要是为了获取共享给该业务的共享集群",
             "in": "query",
             "required": false,
             "type": "string"
@@ -7069,10 +7199,10 @@
           "description": "开启自动升级GKE版本功能,如果集群为发布版本,则强制开启",
           "title": "autoUpgrade"
         },
-        "nodeRole": {
+        "serviceRole": {
           "type": "string",
           "description": "创建eks节点池时指定的iam角色名称",
-          "title": "nodeRole"
+          "title": "serviceRole"
         }
       },
       "title": "AutoScalingGroup define auto scaling information"
@@ -8495,6 +8625,16 @@
           "format": "boolean",
           "description": "标记该集群是否是混部集群",
           "title": "isMixed"
+        },
+        "clusterIamRole": {
+          "type": "string",
+          "description": "aws的iam role, 用于创建eks集群",
+          "title": "clusterIamRole"
+        },
+        "sharedRanges": {
+          "$ref": "#/definitions/clustermanagerSharedClusterRanges",
+          "description": "共享集群可见范围设置(当is_shared为true时且sharedRanges为空时,共享平台所有项目；sharedRanges不为空时,共享给某些业务或者项目，共享项目只有使用权限)",
+          "title": "sharedRanges"
         }
       },
       "description": "记录集群信息，用于维护集群状态",
@@ -8831,6 +8971,11 @@
           "$ref": "#/definitions/clustermanagerClusterModule",
           "description": "集群转移模块信息",
           "title": "module"
+        },
+        "upgradePolicy": {
+          "$ref": "#/definitions/clustermanagerUpgradePolicy",
+          "description": "集群升级策略",
+          "title": "upgradePolicy"
         }
       }
     },
@@ -10142,6 +10287,16 @@
           "format": "boolean",
           "description": "标记该集群是否是混部集群, 默认是false",
           "title": "isMixed"
+        },
+        "clusterIamRole": {
+          "type": "string",
+          "description": "aws的iam role, 用于创建eks集群",
+          "title": "clusterIamRole"
+        },
+        "sharedRanges": {
+          "$ref": "#/definitions/clustermanagerSharedClusterRanges",
+          "description": "共享集群可见范围设置(当is_shared为true时且sharedRanges为空时,共享平台所有项目；sharedRanges不为空时,共享给某些业务或者项目，共享项目只有使用权限)",
+          "title": "sharedRanges"
         }
       },
       "description": "创建集群请求，如果集群已经存在，直接报错。更新集群信息请使用Update接口",
@@ -12645,6 +12800,12 @@
           },
           "description": "关键字数组, 解析出的主机名/hostId等关键字信息",
           "title": "keyList"
+        },
+        "showAvailableNode": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "展示可用节点，未在clustermanager中被占用节点",
+          "title": "showAvailableNode"
         }
       },
       "description": "过滤拓扑的主机列表",
@@ -12684,6 +12845,38 @@
           "title": "data"
         }
       }
+    },
+    "clustermanagerGetServiceRolesResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64",
+          "description": "返回错误码",
+          "title": "code"
+        },
+        "message": {
+          "type": "string",
+          "description": "返回错误信息",
+          "title": "message"
+        },
+        "result": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "返回结果",
+          "title": "result"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/clustermanagerServiceRoleInfo"
+          },
+          "description": "获取到的信息",
+          "title": "data"
+        }
+      },
+      "description": "获取service role列表",
+      "title": "GetServiceRolesResponse"
     },
     "clustermanagerGetTaskResponse": {
       "type": "object",
@@ -12888,6 +13081,12 @@
           "format": "int32",
           "description": "拉取数据数量，最大500，不传默认为20",
           "title": "pageSize"
+        },
+        "showAvailableNode": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "展示可用节点，未在clustermanager中被占用节点",
+          "title": "showAvailableNode"
         }
       },
       "description": "查询拓扑的主机列表",
@@ -12974,6 +13173,44 @@
           "type": "string"
         }
       }
+    },
+    "clustermanagerHardwareProfile": {
+      "type": "object",
+      "properties": {
+        "CPU": {
+          "type": "integer",
+          "format": "int64",
+          "description": "机型CPU信息，与机型instanceType互斥，比instanceType优先级高",
+          "title": "CPU"
+        },
+        "Mem": {
+          "type": "integer",
+          "format": "int64",
+          "description": "机型Mem信息，与机型instanceType互斥，比instanceType优先级高",
+          "title": "Mem"
+        },
+        "GPU": {
+          "type": "integer",
+          "format": "int64",
+          "description": "机型GPU信息，与机型instanceType互斥，比instanceType优先级高，可以会为0",
+          "title": "GPU"
+        },
+        "systemDisk": {
+          "$ref": "#/definitions/clustermanagerDataDisk",
+          "description": "机型系统盘, 主要用于自建资源池. 仅仅provider为self时, 需要关注",
+          "title": "systemDisk"
+        },
+        "dataDisks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/clustermanagerDataDisk"
+          },
+          "description": "机型数据盘, 主要用于自建资源池. 仅仅provider为self时, 需要关注",
+          "title": "dataDisks"
+        }
+      },
+      "description": "CPU、MEM、DISK等配置",
+      "title": "HardwareProfile"
     },
     "clustermanagerHealthResponse": {
       "type": "object",
@@ -13129,6 +13366,14 @@
           "type": "string",
           "description": "集群所在的资源组(azure云)",
           "title": "resourceGroup"
+        },
+        "nodeIps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "集群Master或者节点IP列表, 需要提前纳管至蓝鲸平台。通过反向代理实现集群纳管",
+          "title": "nodeIps"
         }
       },
       "description": "云provider导入集群模式",
@@ -13326,6 +13571,28 @@
           "title": "renewFlag"
         }
       }
+    },
+    "clustermanagerInstanceProfile": {
+      "type": "object",
+      "properties": {
+        "nodeOS": {
+          "type": "string",
+          "description": "节点操作系统",
+          "title": "nodeOS"
+        },
+        "instanceType": {
+          "type": "string",
+          "description": "机型信息字符串，若配置CPU和内存，该值不强制，默认自行向上就近匹配机型信息",
+          "title": "instanceType"
+        },
+        "instanceChargeType": {
+          "type": "string",
+          "description": "计费模式",
+          "title": "instanceChargeType"
+        }
+      },
+      "description": "实例配置",
+      "title": "InstanceProfile"
     },
     "clustermanagerInstanceTemplateConfig": {
       "type": "object",
@@ -13545,6 +13812,17 @@
           },
           "description": "机型数据盘, 主要用于自建资源池. 仅仅provider为self时, 需要关注",
           "title": "dataDisks"
+        },
+        "availableQuota": {
+          "type": "integer",
+          "format": "int64",
+          "description": "该机型可用的quota容量",
+          "title": "availableQuota"
+        },
+        "region": {
+          "type": "string",
+          "description": "机型所在地域, 主要用于自建集群节点池可能存在其他地域的情况",
+          "title": "region"
         }
       },
       "description": "机器类型",
@@ -13573,6 +13851,19 @@
           "type": "string",
           "description": "共享带宽包ID",
           "title": "bandwidthPackageId"
+        },
+        "publicIP": {
+          "type": "string",
+          "description": "公网ip地址",
+          "title": "publicIP"
+        },
+        "publicAccessCidrs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "允许访问Kubernetes API Server的公网Ip cidr",
+          "title": "publicAccessCidrs"
         }
       },
       "title": "InternetAccessible 公网带宽设置"
@@ -15321,6 +15612,27 @@
         }
       }
     },
+    "clustermanagerNetworkProfile": {
+      "type": "object",
+      "properties": {
+        "subnetIDs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "子网ID",
+          "title": "subnetIDs"
+        },
+        "publicIPAssigned": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "是否分配公网IP。默认为false。",
+          "title": "publicIPAssigned"
+        }
+      },
+      "description": "网络相关配置",
+      "title": "NetworkProfile"
+    },
     "clustermanagerNetworkSetting": {
       "type": "object",
       "properties": {
@@ -16562,6 +16874,18 @@
           "type": "string",
           "description": "资源名称",
           "title": "resourceName"
+        },
+        "allowRetry": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "如果该操作是异步任务, 控制任务是否允许重试",
+          "title": "allowRetry"
+        },
+        "allowSkip": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "如果该操作是异步任务, 控制任务是否允许跳过",
+          "title": "allowSkip"
         }
       }
     },
@@ -16718,6 +17042,93 @@
           "title": "data"
         }
       }
+    },
+    "clustermanagerRecommendNodeGroupConf": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "节点池名称",
+          "title": "name"
+        },
+        "serviceRoleName": {
+          "type": "string",
+          "description": "awsCloud节点池服务角色",
+          "title": "serviceRoleName"
+        },
+        "instanceProfile": {
+          "$ref": "#/definitions/clustermanagerInstanceProfile",
+          "description": "实例相关配置",
+          "title": "instanceProfile"
+        },
+        "hardwareProfile": {
+          "$ref": "#/definitions/clustermanagerHardwareProfile",
+          "description": "硬件相关配置",
+          "title": "hardwareProfile"
+        },
+        "networkProfile": {
+          "$ref": "#/definitions/clustermanagerNetworkProfile",
+          "description": "网络相关配置",
+          "title": "networkProfile"
+        },
+        "scalingProfile": {
+          "$ref": "#/definitions/clustermanagerScalingProfile",
+          "description": "扩缩容配置",
+          "title": "scalingProfile"
+        },
+        "mode": {
+          "type": "string",
+          "description": "azureCloud节点池模式,System|User",
+          "title": "mode"
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "节点池所属区域",
+          "title": "zones"
+        }
+      },
+      "description": "创建集群时推荐的节点池配置",
+      "title": "RecommendNodeGroupConf"
+    },
+    "clustermanagerRecommendNodeGroupConfResp": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64",
+          "description": "返回错误码",
+          "title": "code"
+        },
+        "message": {
+          "type": "string",
+          "description": "返回错误信息",
+          "title": "message"
+        },
+        "result": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "返回结果",
+          "title": "result"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/clustermanagerRecommendNodeGroupConf"
+          },
+          "description": "推荐的节点池配置",
+          "title": "data"
+        }
+      },
+      "description": "创建集群时推荐的节点池配置",
+      "title": "RecommendNodeGroupConfResp",
+      "required": [
+        "code",
+        "message",
+        "data"
+      ]
     },
     "clustermanagerRecordNodeInfoRequest": {
       "type": "object",
@@ -16978,6 +17389,30 @@
         }
       }
     },
+    "clustermanagerScalingProfile": {
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "type": "integer",
+          "format": "int64",
+          "description": "弹性伸缩组最大实例数",
+          "title": "maxSize"
+        },
+        "desiredSize": {
+          "type": "integer",
+          "format": "int64",
+          "description": "节点数量",
+          "title": "desiredSize"
+        },
+        "scalingMode": {
+          "type": "string",
+          "description": "扩缩容模式",
+          "title": "scalingMode"
+        }
+      },
+      "description": "节点池扩缩容配置",
+      "title": "ScalingProfile"
+    },
     "clustermanagerScopeInfo": {
       "type": "object",
       "properties": {
@@ -17010,6 +17445,50 @@
       },
       "description": "安全组信息",
       "title": "SecurityGroup"
+    },
+    "clustermanagerServiceRoleInfo": {
+      "type": "object",
+      "properties": {
+        "roleName": {
+          "type": "string",
+          "description": "service role名称",
+          "title": "roleName"
+        },
+        "roleID": {
+          "type": "string",
+          "description": "service role ID",
+          "title": "roleID"
+        },
+        "arn": {
+          "type": "string",
+          "description": "service role arn",
+          "title": "arn"
+        },
+        "description": {
+          "type": "string",
+          "description": "service role描述",
+          "title": "description"
+        }
+      },
+      "description": "service role信息",
+      "title": "ServiceRoleInfo"
+    },
+    "clustermanagerSharedClusterRanges": {
+      "type": "object",
+      "properties": {
+        "bizs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "projectIdOrCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     },
     "clustermanagerSkipTaskRequest": {
       "type": "object",
@@ -17199,6 +17678,11 @@
           "$ref": "#/definitions/clustermanagerClusterInfo",
           "description": "子网是否被集群使用",
           "title": "cluster"
+        },
+        "hwNeutronSubnetID": {
+          "type": "string",
+          "description": "华为对应子网(OpenStack Neutron)接口ID",
+          "title": "hwNeutronSubnetID"
         }
       },
       "description": "子网信息",
@@ -17698,6 +18182,18 @@
           },
           "description": "任务结束时间戳",
           "title": "endTime"
+        },
+        "allowSkip": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "当前步骤失败是否允许跳过,系统内置",
+          "title": "allowSkip"
+        },
+        "allowRetry": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "当前步骤失败是否允许重试(默认都可以重试),系统内置",
+          "title": "allowRetry"
         }
       }
     },
@@ -19001,6 +19497,11 @@
           "format": "boolean",
           "description": "标记该集群是否是混部集群",
           "title": "isMixed"
+        },
+        "sharedRanges": {
+          "$ref": "#/definitions/clustermanagerSharedClusterRanges",
+          "description": "共享集群可见范围设置(当is_shared为true时且sharedRanges为空时,共享平台所有项目；sharedRanges不为空时,共享给某些业务或者项目，共享项目只有使用权限)",
+          "title": "sharedRanges"
         }
       },
       "description": "更新集群信息请求，该接口仅用于信息更新和修正，不会触发任何行为动作。如果需要执行自动化相关流程，请根据需要使用对应的接口",
@@ -19956,6 +20457,16 @@
         "code",
         "message"
       ]
+    },
+    "clustermanagerUpgradePolicy": {
+      "type": "object",
+      "properties": {
+        "supportType": {
+          "type": "string",
+          "description": "aws EKS升级策略类型(EXTENDED|STANDARD)",
+          "title": "supportType"
+        }
+      }
     },
     "clustermanagerVPCCidr": {
       "type": "object",

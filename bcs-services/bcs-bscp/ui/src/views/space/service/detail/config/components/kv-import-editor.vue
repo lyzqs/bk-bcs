@@ -90,6 +90,7 @@
   import SeparatorSelect from '../../../../variables/separator-select.vue';
   import { IConfigKvItem } from '../../../../../../../types/config';
   import { importKvFormText, importKvFormJson, importKvFormYaml } from '../../../../../../api/config';
+  import useServiceStore from '../../../../../../store/service';
 
   interface errorLineItem {
     lineNumber: number;
@@ -98,6 +99,8 @@
 
   const { t } = useI18n();
   const emits = defineEmits(['hasError', 'update:modelValue']);
+
+  const serviceStore = useServiceStore();
 
   const isOpenFullScreen = ref(false);
   const codeEditorRef = ref();
@@ -133,7 +136,6 @@
       if (props.format === 'text') {
         handleValidateEditor();
       } else {
-        console.log(codeEditorRef.value.validate(val), 'c', props.format, val);
         nextTick(() => emits('hasError', !codeEditorRef.value.validate(val)));
       }
     },
@@ -184,23 +186,30 @@
       const kvContent = item.split(regex).map((item) => item.trim());
       const key = kvContent[0];
       const kv_type = kvContent[1] ? kvContent[1].toLowerCase() : '';
-      const value = kvContent[2];
-      const memo = kvContent[3] || '';
-      kvs.value.push({
-        key,
-        kv_type,
-        value,
-        memo,
-      });
+      let secret_type = '';
+      let value = '';
+      let secret_hidden = 'visible';
+      let memo = '';
+      if (kv_type === 'secret') {
+        // 敏感信息批量导入
+        secret_type = kvContent[2];
+        value = kvContent[3];
+        secret_hidden = kvContent[4];
+        memo = kvContent[5] || '';
+      } else {
+        // 普通kv导入
+        value = kvContent[2];
+        memo = kvContent[3] || '';
+      }
       if (kvContent.length < 3) {
         errorLine.value.push({
           errorInfo: t('请检查是否已正确使用分隔符'),
           lineNumber: index + 1,
         });
         hasSeparatorError = true;
-      } else if (kv_type !== 'string' && kv_type !== 'number') {
+      } else if (kv_type !== 'string' && kv_type !== 'number' && kv_type !== 'secret') {
         errorLine.value.push({
-          errorInfo: t('类型必须为 string 或者 number'),
+          errorInfo: t('类型必须为 string , number 或者secret'),
           lineNumber: index + 1,
         });
       } else if (kv_type === 'number' && !/^\d+(\.\d+)?$/.test(value)) {
@@ -213,7 +222,28 @@
           errorInfo: t('value不能为空'),
           lineNumber: index + 1,
         });
+      } else if (kv_type === 'secret') {
+        if (secret_type !== 'password' && secret_type !== 'secret_key' && secret_type !== 'token') {
+          errorLine.value.push({
+            errorInfo: t('敏感信息类型必须为password,secret_key,token'),
+            lineNumber: index + 1,
+          });
+        }
+        if (secret_hidden !== 'visible' && secret_hidden !== 'invisible') {
+          errorLine.value.push({
+            errorInfo: t('是否可见必须为visible或者invisible'),
+            lineNumber: index + 1,
+          });
+        }
       }
+      kvs.value.push({
+        key,
+        kv_type,
+        secret_type,
+        secret_hidden: secret_hidden === 'invisible',
+        value,
+        memo,
+      });
     });
     emits('hasError', textContent.value && errorLine.value.length > 0);
     return hasSeparatorError;
@@ -221,13 +251,17 @@
 
   // 导入kv
   const handleImport = async () => {
+    let res;
     if (props.format === 'text') {
-      await importKvFormText(props.bkBizId, props.appId, kvs.value, false);
+      res = await importKvFormText(props.bkBizId, props.appId, kvs.value, false);
     } else if (props.format === 'json') {
-      await importKvFormJson(props.bkBizId, props.appId, jsonContent.value);
+      res = await importKvFormJson(props.bkBizId, props.appId, jsonContent.value);
     } else {
-      await importKvFormYaml(props.bkBizId, props.appId, yamlContent.value);
+      res = await importKvFormYaml(props.bkBizId, props.appId, yamlContent.value);
     }
+    serviceStore.$patch((state) => {
+      state.topIds = res.data.ids;
+    });
   };
 
   const handleSelectSeparator = (selectSeparator: string) => {

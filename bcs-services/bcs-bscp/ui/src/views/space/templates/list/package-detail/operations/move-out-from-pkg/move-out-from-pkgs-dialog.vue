@@ -67,6 +67,7 @@
   } from '../../../../../../../api/template';
 
   interface ICitedItem {
+    template_id: number;
     id: number;
     name: string;
     appNames: string;
@@ -126,13 +127,15 @@
         params,
       );
       citedPkgsRes.details[0].forEach((item) => {
-        const { template_set_id, template_set_name } = item;
+        // console.log(item, 'item');
+        const { template_set_id, template_set_name, template_id } = item;
         const appNames: string =
           citedAppsRes.details
             .filter((appItem: IPackagesCitedByApps) => appItem.template_set_id === template_set_id)
             .map((appItem: IPackagesCitedByApps) => appItem.app_name)
             .join(',') || '--';
         list.push({
+          template_id,
           id: template_set_id,
           name: template_set_name,
           appNames,
@@ -184,7 +187,13 @@
   const handleConfirm = async () => {
     try {
       pending.value = true;
-      await moveOutTemplateFromPackage(spaceId.value, currentTemplateSpace.value, [props.id], selectedPkgs.value);
+      await moveOutTemplateFromPackage(
+        spaceId.value,
+        currentTemplateSpace.value,
+        [props.id],
+        selectedPkgs.value,
+        false,
+      );
       emits('movedOut');
       close();
       Message({

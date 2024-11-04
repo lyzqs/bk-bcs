@@ -22,6 +22,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/validator"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/kit"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/tools"
 )
 
@@ -38,10 +39,12 @@ type Kv struct {
 
 // KvSpec is kv specific which is defined by user.
 type KvSpec struct {
-	Key     string   `json:"key" gorm:"column:key"`
-	Memo    string   `json:"memo" gorm:"column:memo"`
-	KvType  DataType `json:"kv_type" gorm:"column:kv_type"`
-	Version uint32   `json:"version" gorm:"column:version"`
+	Key          string     `json:"key" gorm:"column:key"`
+	Memo         string     `json:"memo" gorm:"column:memo"`
+	KvType       DataType   `json:"kv_type" gorm:"column:kv_type"`
+	Version      uint32     `json:"version" gorm:"column:version"`
+	SecretType   SecretType `json:"secret_type" gorm:"column:secret_type"`
+	SecretHidden bool       `json:"secret_hidden" gorm:"column:secret_hidden"`
 }
 
 // KvAttachment is a kv attachment
@@ -71,7 +74,7 @@ func (k *Kv) ResType() string {
 }
 
 // ValidateCreate validate kv is valid or not when create it.
-func (k Kv) ValidateCreate() error {
+func (k Kv) ValidateCreate(kit *kit.Kit) error {
 
 	if k.ID > 0 {
 		return errors.New("id should not be set")
@@ -86,7 +89,7 @@ func (k Kv) ValidateCreate() error {
 		return errors.New("spec not set")
 	}
 
-	if err := k.Spec.ValidateCreate(); err != nil {
+	if err := k.Spec.ValidateCreate(kit); err != nil {
 		return err
 	}
 
@@ -110,8 +113,8 @@ func (k Kv) ValidateCreate() error {
 }
 
 // ValidateCreate validate kv spec when it is created.
-func (k KvSpec) ValidateCreate() error {
-	if err := validator.ValidateName(k.Key); err != nil {
+func (k KvSpec) ValidateCreate(kit *kit.Kit) error {
+	if err := validator.ValidateName(kit, k.Key); err != nil {
 		return err
 	}
 
@@ -132,6 +135,7 @@ func (k DataType) ValidateCreateKv() error {
 	case KvJson:
 	case KvYAML:
 	case KvXml:
+	case KvSecret:
 	default:
 		return errors.New("invalid data-type")
 	}
@@ -249,6 +253,8 @@ func (k DataType) ValidateValue(value string) error {
 			return err
 		}
 		return nil
+	case KvSecret:
+		return nil
 	default:
 		return errors.New("invalid key-value type")
 	}
@@ -281,4 +287,35 @@ func (k KvState) Validate() error {
 	default:
 		return errors.New("invalid kv state")
 	}
+}
+
+// SecretType secret type (password、certificate、secret_key、token、customize).
+type SecretType string
+
+const (
+	// SecretTypePassword is the type for password secret
+	SecretTypePassword SecretType = "password"
+	// SecretTypeCertificate is the type for certificate secret
+	SecretTypeCertificate SecretType = "certificate"
+	// SecretTypeSecretKey is the type for secret_key secret
+	SecretTypeSecretKey SecretType = "secret_key"
+	// SecretTypeToken is the type for token secret
+	SecretTypeToken SecretType = "token"
+	// SecretTypeCustom is the type for custom secret
+	SecretTypeCustom SecretType = "custom"
+)
+
+// Validate the secret type is valid or not.
+func (st SecretType) Validate() error {
+	switch st {
+	case SecretTypePassword:
+	case SecretTypeCertificate:
+	case SecretTypeSecretKey:
+	case SecretTypeToken:
+	case SecretTypeCustom:
+	default:
+		return fmt.Errorf("unknown %s secret type", st)
+	}
+
+	return nil
 }

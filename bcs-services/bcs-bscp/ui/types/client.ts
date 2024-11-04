@@ -1,3 +1,4 @@
+import { ICredentialItem } from './credential';
 // 搜索项
 export interface ISelectorItem {
   name: string;
@@ -163,9 +164,18 @@ export interface IVersionDistributionPieItem {
 export interface IExampleFormData {
   clientKey: string;
   privacyCredential: string;
-  tempDir?: string;
-  httpConfigName?: string;
+  tempDir: string;
+  configName?: string;
   labelArr: string[];
   clusterSwitch?: boolean;
   clusterInfo?: string;
+  rules?: string[];
+  systemType?: 'Unix' | 'Windows';
+  selectedLineBreak?: 'LF' | 'CRLF';
 }
+
+export type newICredentialItem = ICredentialItem & {
+  spec: {
+    privacyCredential: string;
+  };
+};

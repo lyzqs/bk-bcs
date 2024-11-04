@@ -44,6 +44,10 @@ func (n *NodeManager) GetNodeByIP(ip string, opt *cloudprovider.GetNodeOption) (
 
 // ListNodesByIP list node by IP set
 func (n *NodeManager) ListNodesByIP(ips []string, opt *cloudprovider.ListNodesOption) ([]*proto.Node, error) {
+	if len(ips) == 0 {
+		return nil, nil
+	}
+
 	return nil, cloudprovider.ErrCloudNotImplemented
 }
 
@@ -108,7 +112,17 @@ func (n *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo, opt 
 			}
 
 			// filter cpu && mem
-			if cpu == 0 || mem == 0 || cpu < 4 || mem < 4 {
+			if cpu == 0 || mem == 0 || cpu < 2 || mem < 4 {
+				continue
+			}
+
+			if info.NodeFamily != "" && info.NodeFamily != *v.Family {
+				continue
+			}
+			if info.Cpu != 0 && info.Cpu != uint32(cpu) {
+				continue
+			}
+			if info.Memory != 0 && info.Memory != uint32(mem) {
 				continue
 			}
 
@@ -193,5 +207,11 @@ func (n *NodeManager) GetResourceGroups(opt *cloudprovider.CommonOption) ([]*pro
 
 // ListRuntimeInfo get runtime info list
 func (n *NodeManager) ListRuntimeInfo(opt *cloudprovider.ListRuntimeInfoOption) (map[string][]string, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}
+
+// GetServiceRoles service roles list
+func (n *NodeManager) GetServiceRoles(opt *cloudprovider.CommonOption, roleType string) (
+	[]*proto.ServiceRoleInfo, error) {
 	return nil, cloudprovider.ErrCloudNotImplemented
 }

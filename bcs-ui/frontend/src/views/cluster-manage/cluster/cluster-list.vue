@@ -30,6 +30,20 @@
       </template>
     </bk-table-column>
     <bk-table-column
+      :label="$t('cluster.labels.provider')"
+      prop="provider"
+      :filters="providerNameList"
+      :filter-method="filterMethod">
+      <template #default="{ row }">
+        <div class="flex items-center">
+          <svg class="size-[20px] mr-[10px]">
+            <use :xlink:href="providerNameMap[row.provider].className"></use>
+          </svg>
+          <span class="text-[12px] bcs-ellipsis">{{ providerNameMap[row.provider].label }}</span>
+        </div>
+      </template>
+    </bk-table-column>
+    <bk-table-column
       :label="$t('cluster.labels.status')"
       prop="status"
       :filters="statusList"
@@ -73,8 +87,7 @@
     <bk-table-column :label="$t('cluster.labels.nodeCounts')">
       <template #default="{ row }">
         <template
-          v-if="perms[row.clusterID] && perms[row.clusterID].cluster_manage
-            && !row.is_shared && row.clusterType !== 'virtual'">
+          v-if="perms[row.clusterID] && perms[row.clusterID].cluster_manage && row.clusterType !== 'virtual'">
           <LoadingIcon
             v-if="clusterNodesMap[row.clusterID] === undefined">
             {{ $t('generic.status.loading') }}...
@@ -337,6 +350,7 @@ import $i18n from '@/i18n/i18n-setup';
 import $router from '@/router';
 import $store from '@/store';
 import RingCell from '@/views/cluster-manage/components/ring-cell.vue';
+import useCloud from '@/views/cluster-manage/use-cloud';
 
 export default defineComponent({
   name: 'ClusterList',
@@ -395,6 +409,11 @@ export default defineComponent({
     const statusList = computed(() => Object.keys(statusTextMap.value).map(status => ({
       text: statusTextMap.value[status],
       value: status,
+    })));
+    const { providerNameMap } = useCloud();
+    const providerNameList = computed(() => Object.keys(providerNameMap).map(name => ({
+      text: providerNameMap[name].label,
+      value: name,
     })));
     const statusColorMap = ref({
       'CREATE-FAILURE': 'red',
@@ -543,6 +562,8 @@ export default defineComponent({
       statusTextMap,
       statusColorMap,
       statusList,
+      providerNameList,
+      providerNameMap,
       filterMethod,
       handleGotoClusterOverview,
       handleGotoClusterDetail,

@@ -61,15 +61,17 @@ func (pbih *portBindingItemHandler) ensureItem(
 	for _, lbObj := range item.PoolItemLoadBalancers {
 		listenerName := common.GetListenerNameWithProtocol(
 			lbObj.LoadbalancerID, item.Protocol, item.StartPort, item.EndPort)
-		listener := &networkextensionv1.Listener{}
+		rawListener := &networkextensionv1.Listener{}
 		if err := pbih.k8sClient.Get(context.Background(), k8sapitypes.NamespacedName{
 			Name:      listenerName,
 			Namespace: item.PoolNamespace,
-		}, listener); err != nil {
+		}, rawListener); err != nil {
 			blog.Warnf("failed to get listener %s/%s, err %s", listenerName, item.PoolNamespace, err.Error())
 			return pbih.generateStatus(item, constant.PortBindingItemStatusInitializing)
 		}
 
+		// do not update informer cache directly
+		listener := rawListener.DeepCopy()
 		// listener has targetGroup
 		if listener.Spec.TargetGroup != nil && len(listener.Spec.TargetGroup.Backends) != 0 {
 			// listener has not synced
@@ -94,19 +96,20 @@ func (pbih *portBindingItemHandler) ensureItem(
 				return err
 			}
 
+			cpListener := li.DeepCopy()
 			// listener has no targetGroup or ip has changed
-			li.Spec.ListenerAttribute = portPool.Spec.ListenerAttribute
+			cpListener.Spec.ListenerAttribute = portPool.Spec.ListenerAttribute
 			if item.ListenerAttribute != nil {
-				li.Spec.ListenerAttribute = item.ListenerAttribute
+				cpListener.Spec.ListenerAttribute = item.ListenerAttribute
 			}
-			li.Status.Status = networkextensionv1.ListenerStatusNotSynced
-			li.Spec.TargetGroup = tmpTargetGroup
-			if li.Labels == nil {
-				li.Labels = make(map[string]string)
+			cpListener.Status.Status = networkextensionv1.ListenerStatusNotSynced
+			cpListener.Spec.TargetGroup = tmpTargetGroup
+			if cpListener.Labels == nil {
+				cpListener.Labels = make(map[string]string)
 			}
-			li.Labels[networkextensionv1.LabelKeyForSourceNamespace] = portBinding.GetNamespace()
+			cpListener.Labels[networkextensionv1.LabelKeyForSourceNamespace] = portBinding.GetNamespace()
 
-			if err := pbih.k8sClient.Update(context.Background(), li, &client.UpdateOptions{}); err != nil {
+			if err := pbih.k8sClient.Update(context.Background(), cpListener, &client.UpdateOptions{}); err != nil {
 				return err
 			}
 			return nil
@@ -139,11 +142,11 @@ func (pbih *portBindingItemHandler) deleteItem(
 	for _, lbObj := range item.PoolItemLoadBalancers {
 		listenerName := common.GetListenerNameWithProtocol(
 			lbObj.LoadbalancerID, item.Protocol, item.StartPort, item.EndPort)
-		listener := &networkextensionv1.Listener{}
+		rawListener := &networkextensionv1.Listener{}
 		if err := pbih.k8sClient.Get(context.Background(), k8sapitypes.NamespacedName{
 			Name:      listenerName,
 			Namespace: item.PoolNamespace,
-		}, listener); err != nil {
+		}, rawListener); err != nil {
 			if k8serrors.IsNotFound(err) {
 				blog.Warnf("listener %s/%s not found, no need to clean", listenerName, item.PoolNamespace)
 				continue
@@ -151,20 +154,22 @@ func (pbih *portBindingItemHandler) deleteItem(
 			blog.Warnf("get listener %s/%s failed, err %s", listenerName, item.PoolNamespace, err.Error())
 			return pbih.generateStatus(item, constant.PortBindingItemStatusDeleting)
 		}
-		if listener.Spec.TargetGroup == nil || len(listener.Spec.TargetGroup.Backends) == 0 {
-			if listener.Status.Status == networkextensionv1.ListenerStatusSynced {
+		// do not update informer cache directly
+		cpListener := rawListener.DeepCopy()
+		if cpListener.Spec.TargetGroup == nil || len(cpListener.Spec.TargetGroup.Backends) == 0 {
+			if cpListener.Status.Status == networkextensionv1.ListenerStatusSynced {
 				blog.Infof("listener %s/%s backend cleaned and synced", listenerName, item.PoolNamespace)
 				continue
 			}
 			blog.Warnf("listener %s/%s backend cleaned, but not synced", listenerName, item.PoolNamespace)
 			return pbih.generateStatus(item, constant.PortBindingItemStatusDeleting)
 		}
-		listener.Spec.TargetGroup = nil
-		listener.Status.Status = networkextensionv1.ListenerStatusNotSynced
-		if listener.Labels != nil {
-			delete(listener.Labels, networkextensionv1.LabelKeyForSourceNamespace)
+		cpListener.Spec.TargetGroup = nil
+		cpListener.Status.Status = networkextensionv1.ListenerStatusNotSynced
+		if cpListener.Labels != nil {
+			delete(cpListener.Labels, networkextensionv1.LabelKeyForSourceNamespace)
 		}
-		if err := pbih.k8sClient.Update(context.Background(), listener, &client.UpdateOptions{}); err != nil {
+		if err := pbih.k8sClient.Update(context.Background(), cpListener, &client.UpdateOptions{}); err != nil {
 			blog.Warnf("failed to update listener %s/%s, err %s", listenerName, item.PoolNamespace, err.Error())
 			return pbih.generateStatus(item, constant.PortBindingItemStatusDeleting)
 		}

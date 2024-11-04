@@ -14,7 +14,7 @@ bcs:
       BCS is designed to bridge the gap between cloud-native technologies and
       real-world business application scenarios
     article2: >-
-      Focusing on the development, integration, and productization of 
+      Focusing on the development, integration, and productization of
       containerized deployment technology solutions for complex application
       scenarios.
     article3: >-
@@ -23,11 +23,13 @@ bcs:
   cluster:
     share: Shared cluster
     managed: TKE (Managed cluster)
+    managed1: Managed cluster
     selfDeployed: Self-deployed cluster
     federation: Federation
     kubeConfig: KubeConfig
     cloud: Cloud credential import
     platform: Platform created
+    machine: Machine
   msg:
     emptyHostResource: >-
       You do not have any host resources under the current business. Please
@@ -55,15 +57,21 @@ bcs:
         text: CMDB
         placeholder: Please select the CMDB business you want to bind
         emptyMsg: Please contact the operator of the CMDB business
-  newVersion: 'Version updated, would you like to refresh the interface?'
   preVersion: Return Old Version
+  newVersion:
+    title: Resource update reminder
+    p1: >-
+      The server-side resource file has been updated. Please refresh the page to
+      obtain the latest resources to avoid the failure of the front-end page
+      execution and cause trouble.
+    p2: 'Clicking OK will refresh the page, please pay attention to saving the data'
 blueking:
   onCall: Contact BK Customer Service
   support: Support
   community: Forum
   website: Official
   docs: Documentation
-  releaseNotes: Release note
+  releaseNotes: Release Notes
   features: Features
   features1: Product features
   apiToken: API token
@@ -72,6 +80,11 @@ blueking:
   help: Help
   contact: Contact Us
   bk: BCS
+  aiScriptsAssistant:
+    desc: Ask AI Assistant
+    errTips: Ask AI Assistant to interpret the error message
+    loading: Loading
+    breakLoading: The chat has been interrupted
 k8s:
   namespace: Namespaces
   label: Labels
@@ -108,7 +121,6 @@ k8s:
       conditions in Readiness Gates are True.
 nav:
   dashboard: Dashboard
-  namespace: Namespaces
   workload: Workload
   configuration: Configuration
   storage: Storage
@@ -133,6 +145,7 @@ nav:
   network: Network
   cloudToken: Cloud Token
   tkexCRD: Kourse
+  templateFile: TemplateFile
 iam:
   title:
     perms: This operation requires the following permissions
@@ -243,9 +256,11 @@ generic:
       network: Network Error
       system: System Error
       data: Data acquisition failure
+      import: Import failure
     warning:
       '403': No permission operation
       '404': Page does not exist
+      invalid: Please enter a valid value
     success:
       ok: Done
       copy: Copied
@@ -270,6 +285,7 @@ generic:
       searchEmpty:
         text: The search result is empty
         subTitle: 'You can try adjusting keywords or {action}'
+      noMatchLabel: No matching Label
     info:
       tips: Tip
       refreshAuth: 'The current operation is permanent, please refresh the interface'
@@ -348,10 +364,14 @@ generic:
     query: Search
     create: Create
     submit: SUBMIT
-    reload: Reload
     copyAll: Copy All
     retry: Retry
     skip: Skip
+    export: Export
+    clone: Clone
+    know: I Know
+    confirmSave: Confirm save
+    detail: Detail
   label:
     basicConfig: Basic config
     key: Key
@@ -402,6 +422,11 @@ generic:
     start: Start
     stop: Stop
     abnormal: Abnormal
+    updatedAt: Updated at
+    source: Source
+    batchSetting: 'Batch setting {0}'
+    resourceName: Resource name
+    resourceID: Resource ID
   status:
     part_failure: Part failure
     support: Support
@@ -448,6 +473,7 @@ generic:
     required: Requiring item
     labelValueEmpty: The label value cannot be empty
     labelKey: 'only support letters, numbers and characters (-_./)'
+    SpeciaLabelKey: 'Invalid input, Please ensure your input follows Kubernetes label format'
     required1: TAINTS cannot have vacant fields
     annotationValueEmpty: The annotation value cannot be empty
     annotations: 'only support letters, numbers, space and characters (-_./)'
@@ -470,8 +496,13 @@ generic:
       dots.
     cidrConflict: 'CIDR conflicts with {cidr}, please re-enter.'
     fieldRequired: '{0} required'
+    fieldRepeat: '{0} repeat'
+    clusterName: >-
+      The cluster name can only contain numbers, letters, mid-line lines (-),
+      down line (_), The beginning must be numbers or letters
   title:
     curVersion: Current
+    diffVersion: Comparison version
     basicInfo: Basic Information
     basicInfo1: Info
     preview: Preview
@@ -577,6 +608,7 @@ cluster:
     setClusterVar: Set Variables
     skipTask: Confirm skip current task
     retryTask: Confirm retry task
+    opRecord: Operate record
   button:
     useSharedCluster: Use shared cluster
     addCluster: Add
@@ -633,6 +665,7 @@ cluster:
     maxPodNum: Max pod number
     clusterLabel: Label
     hideSharedCluster: Hide shared cluster
+    provider: Provider
   status:
     unknown: Unknown cluster status
     importFailed: Import failed
@@ -662,7 +695,7 @@ cluster:
         title: Kubernetes Cluster (with kubeadm)
         subTitle: Provide a solution for cluster management in private environments.
         desc: >-
-          If the business environment cannot use any cloud provider products, 
+          If the business environment cannot use any cloud provider products,
           this feature can be used to create Kubernetes clusters in a private
           environment.
       kubeconfig:
@@ -677,6 +710,17 @@ cluster:
         desc: >-
           Currently supports four cloud providers: Tencent Cloud, AWS, Azure,
           Google Cloud, Huawei Cloud
+        importDesc: >-
+          Currently supports four cloud providers: Tencent Cloud, AWS, Azure,
+          Google Cloud, Huawei Cloud
+      bkSops:
+        title: Imported Cluster (via bk-sops)
+        subTitle: >-
+          You can import any external cluster by executing a bk-sops task on
+          control plane hosts
+        desc: >-
+          By executing bk-sops task on the control plane hosts, automatically
+          install the agent in the cluster to manage external clusters.
     label:
       clusterVersion: Version
       desc: Description
@@ -748,10 +792,6 @@ cluster:
           desc: >-
             Node pod CIDR cannot be adjusted after allocation Please fill in
             after careful evaluation
-        article3: >-
-          The number of nodes can be added with clusters (including Master nodes
-          and node nodes) = (Number of IP -quantity of service) / single node
-          POD quantity upper limit.
         article1: >-
           The container network resources are limited, please allocate it
           reasonably. Under the current container network configuration, the
@@ -760,6 +800,10 @@ cluster:
           When the container network resources are excessive, the container
           network will be automatically scale-up. After the capacity is
           expanded, the cluster can be added at most {count}.
+        article3: >-
+          The number of nodes can be added with clusters (including Master nodes
+          and node nodes) = (Number of IP -quantity of service) / single node
+          POD quantity upper limit.       
       networkMode:
         text: Network Mode
         cni:
@@ -778,6 +822,7 @@ cluster:
       importType: Import Type
       cloudToken: Cloud Token
       kubeConfig: Cluster KubeConfig
+      title: Import a public cloud cluster - Cluster KubeConfig
       network:
         text: Network
         intranet: Intranet
@@ -811,6 +856,7 @@ cluster:
         notSupport: >-
           If the number of controller plane nodes is less than three, high
           availability cannot be supported
+      role: Service role
     msg:
       managedClusterInfo: >-
         Create a custody cluster must add at least one node to run the necessary
@@ -859,6 +905,57 @@ cluster:
       createCloudToken: New voucher
       fileImport: File Import
       textKubeConfig: Usability testing
+    aws:
+      securityGroup:
+        text: Safety group
+        vpcLink: >-
+          'This selection will apply to the Safety group of the EKS-managed
+          elastic network interfaces created in your control plane subnet. To
+          create a new Safety group, please go to the appropriate page in the
+          {0}.'
+        vpcMaster: VPC console
+      cidrTips:
+        tips1: 0.0.0.0/0 is not allowed
+        tips2: Invalid
+      nodePool: Add Node pools
+      editNodePool: Edit Node pools
+      cidrWhitelist: CIDR Whitelist
+      label:
+        defaultNodePool: Default Node Pool
+        skipOrNot: Skip or not
+      validate:
+        subnet: The node pool subnet cannot be empty
+      runtime:
+        extended:
+          label: EXTENDED
+          text: >-
+            This option supports Kubernetes versions for 26 months from the date
+            of release. Extended support requires an additional hourly fee,
+            which begins after the standard support period ends. After the
+            extended support period ends, your cluster will be automatically
+            upgraded to the next version.
+        standard:
+          label: STANDARD
+          text: >-
+            This option supports Kubernetes versions for 14 months from the date
+            of release, at no additional cost. After the standard support period
+            ends, your cluster will be automatically upgraded to the next
+            version.
+      tips:
+        subnetEmpty: 'The subnet is empty, please select a subnet first'
+        awsDesc: >-
+          Amazon VPC CNI ：AWS network plugin that enables Pod networking within
+          the cluster.
+        awsLink: Overview of Amazon VPC CNI functionality.
+    azure:
+      securityGroup:
+        text: Safety group
+        vpcLink: >-
+          'This selection will apply to the Safety group of the AKS-managed
+          elastic network interfaces created in your control plane subnet. To
+          create a new Safety group, please go to the appropriate page in the
+          {0}.'
+        vpcMaster: VPC console
   detail:
     title:
       overview: Overview
@@ -898,8 +995,8 @@ cluster:
       noModule2: 'To add a node from a node pool, configure a transfer module'
       notEmptyNodes: Please delete the nodes before removing the node pool.
       noEnableNodePool: >-
-        Cluster Autoscaler requires at least one node pool to be enabled. 
-        Please disable Cluster Autoscaler before proceeding.
+        Cluster Autoscaler requires at least one node pool to be enabled. Please
+        disable Cluster Autoscaler before proceeding.
       needMoreThanOneNodePoolOn: >-
         Cluster Autoscaler requires at least one node pool.  Please disable
         Cluster Autoscaler before proceeding.
@@ -1050,6 +1147,8 @@ cluster:
           The name does not exceed 255 characters, only supports Chinese,
           English, numbers, and scratch lines, separators (-) and decimal points
         nodeQuotaMaxSize: 'Maximum node quota is {maximum}'
+        nodeCountsMaxSize: The number of Node count cannot be greater than the Node quota
+        minNodes: The number of Node count must be greater than 0
       label:
         nameAndID: Node pool name (ID)
         nodeQuota: Node quota
@@ -1058,6 +1157,7 @@ cluster:
         status: Node pool status
         name: Node pool name
         detail: View node pool details
+        serviceRole: Service role
       title:
         nodeConfig: Node configuration
         initConfig: Initialization configuration
@@ -1141,6 +1241,12 @@ cluster:
             GPSSD: Ultra-High I/O Cloud Disk
             SSD: General-Purpose SSD Cloud Disk
             ESSD: Extreme I/O Cloud Disk
+            gp2: General Purpose SSD gp2
+            gp3: General Purpose SSD gp3
+            io1: Provisioned IOPS io1
+            io2: Provisioned IOPS io2
+            st1: Throughput Optimized HDD st1
+            sc1: Cold HDD sc1
           disk:
             system: System disk
             data: Data disk
@@ -1181,9 +1287,11 @@ cluster:
             The internal cloud environment is automatically allocated by the
             product according to the VPC where the cluster is located.
           placeholder: System automatic allocation
+          validate: Please select at least two subnets from different availability zones
           label:
             subnetID: Subnet id
             subnetName: Subnet name
+            zone: Zone
             remainIp: IP
             unUsedReason:
               text: Used for reason
@@ -1203,6 +1311,15 @@ cluster:
           title: Runtime version
           desc: >-
             The runtime component version inherits the TKE cluster and does not
+            support modification
+        dockerGraphPathDefault:
+          desc: The container directory inherits cluster and does not support
+            modification
+        containerRuntimeDefault:
+          desc: The runtime component inherits the cluster and does not support
+            modification
+        runtimeVersionDefault:
+          desc: The runtime component version inherits the cluster and does not
             support modification
         imageProvider:
           title: Image provider
@@ -1449,6 +1566,8 @@ cluster:
       retry: Failure to retry
       setLabel: Set label
       setTaint: Set taint
+      addLabel: Add tag
+      addTaint: Add taint
       copy:
         text: Copy
         checkedIP: Copy check ip
@@ -1456,6 +1575,8 @@ cluster:
       cancelSelectAll: Cancel all data
       delete:
         subTitle: 'Confirm whether to delete {ip} and other {num} nodes'
+      saveSetting: Change Preview
+      gotIt: Got it
     msg:
       labelDesc: Tag helps to sort out your resources
       selectedData: 'Selected {num}'
@@ -1469,8 +1590,20 @@ cluster:
       disableImportClusterAction: 'Kubeconfig imports cluster, node management function is unavailable'
       disableImportClusterAddNode: Importing a cluster does not support adding nodes from existing servers.
       hasNotNodePoolNode: There are nodes added by non-node pools among the selected nodes.
+      disableBatchSettingNodes: There are abnormal nodes among the selected nodes.
+      undo: undo
+      batchUndo: Batch undo
+      remove: remove
+      batchRemove: Batch remove
+      batchEdit: Batch edit
+      copyNodeIP: Click to Copy Node IP
+      note: 'Note: NoExecute taint may evict all Pods on the node; proceed with care.'
     placeholder:
       searchNode: 'Search for IP, label, taints, annotations, status, node source, nodePool'
+      inputKey: Please enter the key
+      inputValue: Please enter the value
+      locationTag: Location tag
+      locationTaint: Location taint
     title:
       confirmAddNode: Determine the additional node
       confirmReAddNode: Confirm the re-added node
@@ -1479,6 +1612,14 @@ cluster:
       batchSetLabel:
         text: Set label batch
         desc: Batch settings only show the same key label
+      batchSetTaint:
+        text: Set taint batch
+      tableSetting: Table setting
+      fieldDisplaySettings: Field display settings
+      nodeSaveError: Some nodes failed to save
+      tabelTitle: >-
+        The following nodes encountered errors and failed during this batch
+        operation:
     label:
       podCounts: Pods
       index: No.
@@ -1488,6 +1629,11 @@ cluster:
         text: Node source
         add: Manually added
       nodePool: Node pool
+      thisAddition: This addition
+      thisRemoval: This removal
+      nodeNum: >-
+        This selection includes {nodeNum} nodes, and the batch edit label
+        content for this batch is as follows:
     metric:
       cpuUsageAndRequestUsage: CPU usage rate/packing rate
       memUsageAndRequestUsage: Memory usage/packing rate
@@ -1516,6 +1662,9 @@ cluster:
         selectAllNs: All namespaces
         kernel: Core
         runtime: Runtime
+  operateRecord:
+    placeholder:
+      searchRecord: 'Search for resource name, resource ID, status, or initiator'
 deploy:
   helm:
     title:
@@ -2222,8 +2371,8 @@ deploy:
     variableList: Variable list
     imageSearch: Images query
     addK8sResourceYaml: >-
-      You can create a new K8S resource yaml file by clicking the "+" button, 
-      or by using the option above
+      You can create a new K8S resource yaml file by clicking the "+" button, or
+      by using the option above
     importButton: Import button
     importZip: import zip archive
     chooseImage: Choose image
@@ -2233,7 +2382,7 @@ deploy:
     fileName: Filename
     selectZipToImport: >-
       Please select a archive file (*.zip) to import, with file names ending in
-      .yaml.  The yaml files (excluding those in the common Manifest directory) 
+      .yaml.  The yaml files (excluding those in the common Manifest directory)
       will be imported into the custom Manifest category.  Note: Files with the
       same name will be overwritten.
     enterResourceFileName: Please enter the resource filename
@@ -2370,7 +2519,7 @@ deploy:
       Create your JSON file according to the above template and select "file
       import" operation
     scopeTips: >-
-      The meaning of the scope value:  "global" represents a global variable, 
+      The meaning of the scope value:  "global" represents a global variable,
       "cluster" represents a cluster variable,  and "namespace" represents a
       namespace variable.
     clusterTips: >-
@@ -2778,11 +2927,6 @@ logCollector:
       characters
     logPath: Only absolute paths are supported
   msg:
-    logCollector: >-
-      Supports the collection settings of container standard output logs and
-      file path logs. The log collection service has been upgraded. It is
-      recommended to "generate new rules" for old version rules and clean them
-      up in time.
     oldRuleToNewRule: >-
       After generating a new rule, the log data collected by the old and new
       version rules will be completely synchronized after {0}, and the system
@@ -3032,6 +3176,21 @@ importGoogleCloud:
     regions: Regions
   tips:
     disabledTips: Credentials associated with the cluster and cannot be deleted
+importBkSopsCloud:
+  title: Import a public cloud cluster - BK SOPS
+  label:
+    clusterName: Cluster name
+    controlPanel: Control Panel
+    addServer: Add Server
+    advancedParameters: Advanced Parameters
+    desc: Description
+  button:
+    import: Import
+  message:
+    nodeTips: >-
+      You can import through the cluster master node and execute kubectl
+      commands.
+    errorAgent: The import of the node agent is abnormal.
 azureCloud:
   button:
     create: Create
@@ -3086,7 +3245,7 @@ huaweiCloud:
       and maintained by the Huawei team, and cluster administrators do not need
       to concern themselves with the management and maintenance of the cluster
       Master.
-    cluster: ''
+    cluster: Cluster
 importHuaweiCloud:
   title: Import a public cloud cluster - Huawei Cloud
   label:
@@ -3233,6 +3392,10 @@ azureCA:
     dataDisk: >-
       After purchasing a data disk and adding nodes, you need to manually format
       and mount the disk.
+  password:
+    set: Set password
+    confirm: Confirm password
+awsCA:
   password:
     set: Set password
     confirm: Confirm password
@@ -3401,6 +3564,7 @@ tke:
       re-enter.
     supportCidrList: 'Supports only network segments between {0}.'
     formErr: The form was filled in incorrectly. Please modify it
+    leastTwoDifferentAZs: Subnets specified must be in at least two different AZs
   configRec:
     l100:
       text: Node Count 1~100
@@ -3527,6 +3691,12 @@ tkeCa:
       about the system disk and data disk. At least one data disk of 100GB or
       more is required.
 provider:
+  tencentyun: TencentCloud
+  huaweiyun: HuaweiCloud
+  yamaxunyun: AwsCloud
+  gugeyun: gcpCloud
+  weiruanyun: AzureCloud
+  blueKingyun: BlueKingCloud
   tencentPublicCloud: TencentPublicCloud
 container:
   label:
@@ -3536,3 +3706,116 @@ container:
     reason: Reason
     exitCode: Exit code
     finishedAt: Finished at
+templateFile:
+  title:
+    file: Template File
+    createVersion: Create Version
+    createSpace: Create Folder
+    rename: Rename
+    versionManage: Version Management
+    modifyMetadata: Modify Metadata
+    editNewVersion: Edit New Version
+    deployFile: Deploy Template File
+    deploySetting: Deployment Settings
+    deployReview: Deployment Preview
+    disableYamlToForm: Unable to switch mode
+    fileList: File List
+    import: Import file package
+    clone: Clone
+  button:
+    formMode: Form Mode
+    yamlMode: YAML Mode
+    rename: Rename
+    createFile: Create Template File
+    delete: Delete
+    deploy: Deploy
+    previewAndDeploy: Preview and deploy
+    versionManage: Version Management
+    confirmDeploy: Confirm Deployment
+    AddToFavorites: Add to Favorites
+    RemoveFromFavorites: Remove from Favorites
+    import: Import
+    export: Export all folders
+    exportFolder: Export Folder
+  placeholder:
+    searchFile: Template File Name/Type/Category Tag/Version/Updater/Update Time
+    searchVersion: Version Number/Version Log/Updater
+    searchSpace: Folder Name
+  label:
+    name: Name
+    templateName: Template name
+    resourceType: Type
+    latestVersion: Latest Version
+    spaceName: Folder Name
+    kindType: Resource Type
+    workload: Workload
+    versionDesc: Version Log
+    desc: Template description
+    semver:
+      major: Major Version
+      minor: Minor Version
+      patch: Patch Version
+      preRelease: Pre-release Version
+    rebaseVersion: Select Load Version
+    version: Version Number
+    versionType: Version Type
+    fileVersion: Template File Version
+    params: Parameters
+    otherParams: Other Variables
+    semverNo: Semver no
+    semverDesc: Semver desc
+    byCluster: By Cluster
+    versionDiff: Version comparison
+    untitled: Untitled
+  tips:
+    disableYamlToFormReason: >-
+      Source file, {0}, please continue to use the source mode to edit the
+      template or modify and try again
+    preKind: Pre kind
+    nextKind: Next kind
+    bookmark: Bookmark folder
+    unbookmark: Unbookmark
+    uploadTips: >-
+      Supports .tgz and .tar.gz compressed file formats, with a maximum size of
+      {0}MB
+    createSpace: Create Folder
+  tag:
+    draft: draft
+    baseOn: base on
+    latestUpdate: Last Updated
+templateSet:
+  title:
+    set: Template Set
+    versionManage: Version Management
+    addTemplateFile: Add Template File
+    modifyMetadata: Modify Metadata
+  label:
+    name: Template Name
+    appVersion: Application Version
+    desc: Template Set Description
+    templateFile: Template File
+    setVersion: Template Version
+    key: Keyword
+    label: Category Tag
+    versionNo: Version Number
+    set: Template Set
+  button:
+    addFile: Add Template File
+    existFile: Select Existing Template File
+    createFile: Create Template File
+    addNow: Add Now
+    versionManage: Version Management
+    deploy: Deploy Now
+  placeholder:
+    searchFile: Template Name/Resource Type
+    searchSet: Template Set Name/Version/Repository/Keyword/Updater
+    searchVersion: Version Number/Version Log/Updater
+  tips:
+    emptyTemplateFile: No Template File
+    listView: List View
+    cardView: Card View
+    cantDeploy: 'Cannot deploy: No saved versions'
+diff:
+  delete: Delete
+  change: Change
+  add: Add

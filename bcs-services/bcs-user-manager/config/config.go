@@ -19,7 +19,7 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-common/common/encryptv2" // nolint
 	"github.com/Tencent/bk-bcs/bcs-common/common/static"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/auth/iam"
-	registry "github.com/Tencent/bk-bcs/bcs-common/pkg/registryv4"
+	registry "github.com/Tencent/bk-bcs/bcs-common/pkg/registry"
 
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-user-manager/options"
 )
@@ -49,6 +49,21 @@ type CertConfig struct {
 	KeyFile    string
 	CertPasswd string
 	IsSSL      bool
+}
+
+// RedisConfig is configuration of Redis
+type RedisConfig struct {
+	Addr         string
+	Password     string
+	DB           int
+	MasterName   string
+	RedisMode    string
+	DialTimeout  int
+	ReadTimeout  int
+	WriteTimeout int
+	PoolSize     int
+	MinIdleConns int
+	IdleTimeout  int
 }
 
 // Encrypt define encrypt config
@@ -83,11 +98,13 @@ type UserMgrConfig struct {
 
 	VerifyClientTLS bool
 
-	DSN            string
-	RedisDSN       string
-	BootStrapUsers []options.BootStrapUser
-	TKE            options.TKEOptions
-	PeerToken      string
+	DSN             string
+	RedisDSN        string
+	RedisConfig     RedisConfig
+	EnableTokenSync bool
+	BootStrapUsers  []options.BootStrapUser
+	TKE             options.TKEOptions
+	PeerToken       string
 
 	IAMConfig  options.IAMConfig
 	EtcdConfig registry.CMDOptions

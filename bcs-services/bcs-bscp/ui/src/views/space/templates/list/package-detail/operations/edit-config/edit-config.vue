@@ -10,7 +10,7 @@
       <ConfigForm
         v-if="!configDetailLoading"
         ref="formRef"
-        v-model:fileUploading="fileUploading"
+        v-model:file-uploading="fileUploading"
         class="config-form-wrapper"
         :config="configForm"
         :content="content"
@@ -18,6 +18,7 @@
         :is-tpl="true"
         :bk-biz-id="spaceId"
         :id="currentTemplateSpace"
+        :file-size-limit="spaceFeatureFlags.RESOURCE_LIMIT.maxFileSize"
         @change="handleFormChange" />
     </bk-loading>
     <div class="action-btns">
@@ -45,7 +46,7 @@
   import useModalCloseConfirmation from '../../../../../../../utils/hooks/use-modal-close-confirmation';
   import ConfigForm from '../../../../../service/detail/config/config-list/config-table-list/config-form.vue';
 
-  const { spaceId } = storeToRefs(useGlobalStore());
+  const { spaceId, spaceFeatureFlags } = storeToRefs(useGlobalStore());
   const { currentTemplateSpace } = storeToRefs(useTemplateStore());
   const { t } = useI18n();
 

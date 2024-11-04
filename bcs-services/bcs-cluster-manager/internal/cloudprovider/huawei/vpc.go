@@ -110,6 +110,7 @@ func (vm *VPCManager) ListSubnets(vpcID, zone string, opt *cloudprovider.ListNet
 			Zone:                    subnetZone,
 			ZoneName:                subnetZoneName,
 			AvailableIPAddressCount: uint64(cnt),
+			HwNeutronSubnetID:       s.NeutronSubnetId,
 		})
 	}
 
@@ -173,7 +174,7 @@ func (vm *VPCManager) ListBandwidthPacks(opt *cloudprovider.CommonOption) ([]*pr
 
 // CheckConflictInVpcCidr check cidr if conflict with vpc cidrs
 func (vm *VPCManager) CheckConflictInVpcCidr(vpcID string, cidr string,
-	opt *cloudprovider.CommonOption) ([]string, error) {
+	opt *cloudprovider.CheckConflictInVpcCidrOption) ([]string, error) {
 	return nil, cloudprovider.ErrCloudNotImplemented
 }
 

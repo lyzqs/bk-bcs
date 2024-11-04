@@ -18,6 +18,7 @@ import (
 
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/enumor"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/validator"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/kit"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/runtime/selector"
 )
 
@@ -62,7 +63,7 @@ func (g Group) ResType() string {
 }
 
 // ValidateCreate validate group is valid or not when create it.
-func (g Group) ValidateCreate() error {
+func (g Group) ValidateCreate(kit *kit.Kit) error {
 
 	if g.ID > 0 {
 		return errors.New("id should not be set")
@@ -72,7 +73,7 @@ func (g Group) ValidateCreate() error {
 		return errors.New("spec not set")
 	}
 
-	if err := g.Spec.ValidateCreate(); err != nil {
+	if err := g.Spec.ValidateCreate(kit); err != nil {
 		return err
 	}
 
@@ -96,7 +97,7 @@ func (g Group) ValidateCreate() error {
 }
 
 // ValidateUpdate validate group is valid or not when update it.
-func (g Group) ValidateUpdate() error {
+func (g Group) ValidateUpdate(kit *kit.Kit) error {
 
 	if g.ID <= 0 {
 		return errors.New("id should be set")
@@ -105,7 +106,7 @@ func (g Group) ValidateUpdate() error {
 	changed := false
 	if g.Spec != nil {
 		changed = true
-		if err := g.Spec.ValidateUpdate(); err != nil {
+		if err := g.Spec.ValidateUpdate(kit); err != nil {
 			return err
 		}
 	}
@@ -170,16 +171,16 @@ type GroupSpec struct {
 }
 
 const (
-	// Custom means this is a user customed group, it's selector is defined by user
-	Custom GroupMode = "custom"
-	// Debug means that this group can noly set UID,
+	// GroupModeCustom means this is a user customed group, it's selector is defined by user
+	GroupModeCustom GroupMode = "custom"
+	// GroupModeDebug means that this group can noly set UID,
 	// in other word can only select specific instance
-	Debug GroupMode = "debug"
-	// Default will select instances that won't be selected by any other released groups
-	Default GroupMode = "default"
-	// BuiltIn define bscp built-in group,eg. ClusterID, Namespace, CMDBModuleID...
-	// Note: BuiltIn define bscp built-in group,eg. ClusterID, Namespace, CMDBModuleID...
-	BuiltIn GroupMode = "builtin"
+	GroupModeDebug GroupMode = "debug"
+	// GroupModeDefault will select instances that won't be selected by any other released groups
+	GroupModeDefault GroupMode = "default"
+	// GroupModeBuiltIn define bscp built-in group,eg. ClusterID, Namespace, CMDBModuleID...
+	// Note: GroupModeBuiltIn define bscp built-in group,eg. ClusterID, Namespace, CMDBModuleID...
+	GroupModeBuiltIn GroupMode = "builtin"
 )
 
 // GroupMode is the mode of an group works in
@@ -193,9 +194,9 @@ func (g GroupMode) String() string {
 // Validate strategy set type.
 func (g GroupMode) Validate() error {
 	switch g {
-	case Custom:
-	case Debug:
-	case Default:
+	case GroupModeCustom:
+	case GroupModeDebug:
+	case GroupModeDefault:
 	default:
 		return fmt.Errorf("unsupported group working mode: %s", g)
 	}
@@ -204,22 +205,22 @@ func (g GroupMode) Validate() error {
 }
 
 // ValidateCreate validate group spec when it is created.
-func (g GroupSpec) ValidateCreate() error {
-	if err := validator.ValidateName(g.Name); err != nil {
+func (g GroupSpec) ValidateCreate(kit *kit.Kit) error {
+	if err := validator.ValidateName(kit, g.Name); err != nil {
 		return err
 	}
 	if err := g.Mode.Validate(); err != nil {
 		return err
 	}
 	switch g.Mode {
-	case Custom:
+	case GroupModeCustom:
 		if g.Selector == nil || g.Selector.IsEmpty() {
 			return errors.New("group works in custom mode, selector should be set")
 		}
 		if err := g.Selector.Validate(); err != nil {
 			return fmt.Errorf("group works in custom mode, selector is invalid, err: %v", err)
 		}
-	case Debug:
+	case GroupModeDebug:
 		if g.UID == "" {
 			return errors.New("group works in debug mode, uid should be set")
 		}
@@ -230,8 +231,8 @@ func (g GroupSpec) ValidateCreate() error {
 }
 
 // ValidateUpdate validate group spec when it is updated.
-func (g GroupSpec) ValidateUpdate() error {
-	if err := validator.ValidateName(g.Name); err != nil {
+func (g GroupSpec) ValidateUpdate(kit *kit.Kit) error {
+	if err := validator.ValidateName(kit, g.Name); err != nil {
 		return err
 	}
 

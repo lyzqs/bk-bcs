@@ -14,18 +14,20 @@
 package types
 
 import (
+	"errors"
 	"time"
 )
 
 const (
 	// TaskTimeFormat task time format, e.g. 2006-01-02T15:04:05Z07:00
 	TaskTimeFormat = time.RFC3339
-	// DefaultJsonExtrasContent default json extras content
-	DefaultJsonExtrasContent = "{}"
+
 	// DefaultMaxExecuteTimeSeconds default max execute time for 1 hour
 	DefaultMaxExecuteTimeSeconds = 3600
 	// DefaultTaskMessage default message
 	DefaultTaskMessage = "task initializing"
+	// DefaultPayloadContent default json extras content
+	DefaultPayloadContent = "{}"
 )
 
 const (
@@ -39,54 +41,73 @@ const (
 	TaskStatusFailure = "FAILURE"
 	// TaskStatusTimeout task run timeout
 	TaskStatusTimeout = "TIMEOUT"
-	// TaskStatusForceTerminate force task terminate
-	TaskStatusForceTerminate = "FORCETERMINATE"
+	// TaskStatusRevoked task has been revoked
+	TaskStatusRevoked = "REVOKED"
 	// TaskStatusNotStarted force task terminate
 	TaskStatusNotStarted = "NOTSTARTED"
 )
 
+var (
+	// ErrNotImplemented not implemented error
+	ErrNotImplemented = errors.New("not implemented")
+)
+
 // Task task definition
 type Task struct {
-	// index for task, client should set this field
-	TaskIndex string `json:"taskIndex" bson:"taskIndex"`
-	TaskID    string `json:"taskId" bson:"taskId"`
-	TaskType  string `json:"taskType" bson:"taskType"`
-	TaskName  string `json:"taskName" bson:"taskName"`
-	// steps and params
-	CurrentStep      string            `json:"currentStep" bson:"currentStep"`
-	StepSequence     []string          `json:"stepSequence" bson:"stepSequence"`
-	Steps            map[string]*Step  `json:"steps" bson:"steps"`
-	CallBackFuncName string            `json:"callBackFuncName" bson:"callBackFuncName"`
-	CommonParams     map[string]string `json:"commonParams" bson:"commonParams"`
-	ExtraJson        string            `json:"extraJson" bson:"extraJson"`
-
-	Status              string `json:"status" bson:"status"`
-	Message             string `json:"message" bson:"message"`
-	ForceTerminate      bool   `json:"forceTerminate" bson:"forceTerminate"`
-	Start               string `json:"start" bson:"start"`
-	End                 string `json:"end" bson:"end"`
-	ExecutionTime       uint32 `json:"executionTime" bson:"executionTime"`
-	MaxExecutionSeconds uint32 `json:"maxExecutionSeconds" bson:"maxExecutionSeconds"`
-	Creator             string `json:"creator" bson:"creator"`
-	LastUpdate          string `json:"lastUpdate" bson:"lastUpdate"`
-	Updater             string `json:"updater" bson:"updater"`
+	TaskIndex           string            `json:"taskIndex"`
+	TaskIndexType       string            `json:"taskIndexType"`
+	TaskID              string            `json:"taskID"`
+	TaskType            string            `json:"taskType"`
+	TaskName            string            `json:"taskName"`
+	CurrentStep         string            `json:"currentStep"`
+	Steps               []*Step           `json:"steps"`
+	CallbackName        string            `json:"callbackName"`
+	CommonParams        map[string]string `json:"commonParams"`
+	CommonPayload       string            `json:"commonPayload"`
+	Status              string            `json:"status"`
+	Message             string            `json:"message"`
+	ExecutionTime       uint32            `json:"executionTime"`
+	MaxExecutionSeconds uint32            `json:"maxExecutionSeconds"`
+	Creator             string            `json:"creator"`
+	Updater             string            `json:"updater"`
+	Start               time.Time         `json:"start"`
+	End                 time.Time         `json:"end"`
+	CreatedAt           time.Time         `json:"createdAt"`
+	LastUpdate          time.Time         `json:"lastUpdate"`
 }
 
 // Step step definition
 type Step struct {
-	Name   string            `json:"name" bson:"name"`
-	Alias  string            `json:"alias" bson:"alias"`
-	Params map[string]string `json:"params" bson:"params"`
-	// step extras for string json, need client step to parse
-	Extras       string `json:"extras" bson:"extras"`
-	Status       string `json:"status" bson:"status"`
-	Message      string `json:"message" bson:"message"`
-	SkipOnFailed bool   `json:"skipOnFailed" bson:"skipOnFailed"`
-	RetryCount   uint32 `json:"retryCount" bson:"retryCount"`
+	Name                string            `json:"name"`
+	Alias               string            `json:"alias"`
+	Executor            string            `json:"executor"`
+	Params              map[string]string `json:"params"`
+	Payload             string            `json:"payload"`
+	Status              string            `json:"status"`
+	Message             string            `json:"message"`
+	ETA                 *time.Time        `json:"eta"` // 延迟执行时间(Estimated Time of Arrival)
+	SkipOnFailed        bool              `json:"skipOnFailed"`
+	RetryCount          uint32            `json:"retryCount"`
+	MaxRetries          uint32            `json:"maxRetries"`
+	ExecutionTime       uint32            `json:"executionTime"`
+	MaxExecutionSeconds uint32            `json:"maxExecutionSeconds"`
+	Start               time.Time         `json:"start"`
+	End                 time.Time         `json:"end"`
+	LastUpdate          time.Time         `json:"lastUpdate"`
+}
 
-	Start               string `json:"start" bson:"start"`
-	End                 string `json:"end" bson:"end"`
-	ExecutionTime       uint32 `json:"executionTime" bson:"executionTime"`
-	MaxExecutionSeconds uint32 `json:"maxExecutionSeconds" bson:"maxExecutionSeconds"`
-	LastUpdate          string `json:"lastUpdate" bson:"lastUpdate"`
+// TaskType taskType
+type TaskType string // nolint
+
+// String toString
+func (tt TaskType) String() string {
+	return string(tt)
+}
+
+// TaskName xxx
+type TaskName string // nolint
+
+// String xxx
+func (tn TaskName) String() string {
+	return string(tn)
 }

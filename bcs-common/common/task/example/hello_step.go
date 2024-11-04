@@ -16,7 +16,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/Tencent/bk-bcs/bcs-common/common/task"
+	istep "github.com/Tencent/bk-bcs/bcs-common/common/task/steps/iface"
 	"github.com/Tencent/bk-bcs/bcs-common/common/task/types"
 )
 
@@ -43,22 +43,15 @@ func (s HelloStep) GetName() string {
 	return method
 }
 
-// DoWork for worker exec task
-func (s HelloStep) DoWork(task *types.Task) error {
-	_, ok := task.GetStep(s.GetName())
-	if !ok {
-		return fmt.Errorf("task %s step %s not exist", task.GetTaskID(), s.GetName())
-	}
-
-	// get step params && handle business logic
-
-	fmt.Printf("%s %s %s\n", task.GetTaskID(), task.GetTaskType(), task.GetTaskName())
+// Execute for worker exec task
+func (s HelloStep) Execute(c *istep.Context) error {
+	fmt.Printf("%s %s %s\n", c.GetTaskID(), c.GetTaskType(), c.GetTaskName())
 	return nil
 }
 
 // BuildStep build step
-func (s HelloStep) BuildStep(kvs []task.KeyValue, opts ...types.StepOption) *types.Step {
-	step := types.NewStep(s.GetName(), s.Alias(), opts...)
+func (s HelloStep) BuildStep(kvs []istep.KeyValue, opts ...types.StepOption) *types.Step {
+	step := types.NewStep(s.GetName(), method, opts...)
 
 	// build step paras
 	for _, v := range kvs {
@@ -66,4 +59,9 @@ func (s HelloStep) BuildStep(kvs []task.KeyValue, opts ...types.StepOption) *typ
 	}
 
 	return step
+}
+
+func init() {
+	// register step
+	istep.Register(method, NewHelloStep())
 }

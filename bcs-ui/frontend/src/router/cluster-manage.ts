@@ -7,23 +7,29 @@ const Cluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-m
 // 创建集群
 const ClusterCreate = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/index.vue');
 // 创建腾讯云集群
-const CreateTencentCloudCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/add-cluster.vue');
+const CreateTencentCloudCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/create/tencent-cloud.vue');
 // VCluster集群
-const CreateVCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/vcluster/add-vcluster.vue');
+const CreateVCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/create/vcluster/vcluster.vue');
 // ee版本创建集群流程
-const CreateK8SCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/create-k8s.vue');
+const CreateK8SCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/create/k8s.vue');
+// 创建aws云集群
+const CreateAWSCloudCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/create/aws-cloud/index.vue');
+// 创建aws云集群
+const CreateAzureCloudCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/create/azure-cloud/index.vue');
 
 // import模式
-const ImportCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/import-cluster.vue');
-const ImportGoogleCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/google-cloud.vue');
-const ImportAzureCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/azure-cloud.vue');
-const ImportHuaweiCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/huawei-cloud.vue');
-const ImportAwsCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/amazon-cloud.vue');
+const ImportCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/import/import-cluster.vue');
+const ImportGoogleCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/import/google-cloud.vue');
+const importBkSopsCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/import/bk-sops.vue');
+const ImportAzureCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/import/azure-cloud.vue');
+const ImportHuaweiCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/import/huawei-cloud.vue');
+const ImportAwsCluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/import/amazon-cloud.vue');
 const ClusterNodeOverview = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/node-list/node-overview.vue');
 // const Node = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/node-list/node.vue');
 const NodeTemplate = () => import(/* webpackChunkName: 'cluster'  */'@/views/cluster-manage/node-template/node-template.vue');
 const EditNodeTemplate = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/node-template/edit-node-template.vue');
 const AddClusterNode = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/node-list/add-nodes.vue');
+const batchSettingNode = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/node-list/batch-settings.vue');
 const NodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/tencent/node-pool.vue');
 const NodePoolDetail = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/tencent/node-pool-detail.vue');
 const EditNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/tencent/edit-node-pool.vue');
@@ -32,7 +38,7 @@ const InternalNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/
 const InternalNodePoolDetail = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/internal/node-pool-detail.vue');
 const InternalEditNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/internal/edit-node-pool.vue');
 const PodDetail = () => import(/* webpackChunkName: 'dashboard' */'@/views/resource-view/workload/detail/index.vue');
-const CreateTKECluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/tencent/index.vue');
+const CreateTKECluster = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/add/create/tencent-public-cloud/index.vue');
 
 // google ca
 const GoogleNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/google/node-pool.vue');
@@ -56,6 +62,49 @@ const HuaweiNodePoolDetail = () => import(/* webpackChunkName: 'cluster' */'@/vi
 // 编辑配置
 const HuaweiEditNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/huawei/edit-node-pool.vue');
 
+// aws ca
+// 新建节点池
+const AwsNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/aws/node-pool.vue');
+// 扩缩容记录
+const AwsNodePoolDetail = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/aws/node-pool-detail.vue');
+// 编辑配置
+const AwsEditNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/aws/edit-node-pool.vue');
+
+// k8s ca
+// 新建节点池
+const BluekingNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/k8s/node-pool.vue');
+// 扩缩容记录
+const BluekingNodePoolDetail = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/k8s/node-pool-detail.vue');
+// 编辑配置
+const BluekingEditNodePool = () => import(/* webpackChunkName: 'cluster' */'@/views/cluster-manage/autoscaler/k8s/edit-node-pool.vue');
+
+// 添加节点路由映射对象
+const nodePoolRouterMap = {
+  gcpCloud: 'googleNodePool',
+  azureCloud: 'azureNodePool',
+  huaweiCloud: 'huaweiNodePool',
+  awsCloud: 'awsNodePool',
+  bluekingCloud: 'bluekingNodePool',
+};
+
+// 节点配置路由映射对象
+const nodePoolConfigRouterMap = {
+  gcpCloud: 'googleEditNodePool',
+  azureCloud: 'azureEditNodePool',
+  huaweiCloud: 'huaweiEditNodePool',
+  awsCloud: 'awsEditNodePool',
+  bluekingCloud: 'bluekingEditNodePool',
+};
+
+// 节点池详情路由映射对象
+const nodePoolDetailRouterMap = {
+  gcpCloud: 'googleNodePoolDetail',
+  azureCloud: 'azureNodePoolDetail',
+  huaweiCloud: 'huaweiNodePoolDetail',
+  awsCloud: 'awsNodePoolDetail',
+  bluekingCloud: 'bluekingNodePoolDetail',
+};
+
 // 集群管理
 export default [
   {
@@ -65,6 +114,7 @@ export default [
     component: Cluster,
     meta: {
       hideMenu: true,
+      keepAlive: true,
     },
   },
   {
@@ -102,6 +152,26 @@ export default [
     path: 'clusters/cloud/tencent',
     name: 'createTKECluster',
     component: CreateTKECluster,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  // 创建亚马逊云集群
+  {
+    path: 'clusters/cloud/aws',
+    name: 'CreateAWSCloudCluster',
+    component: CreateAWSCloudCluster,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  // 创建微软云集群
+  {
+    path: 'clusters/cloud/azure',
+    name: 'CreateAzureCloudCluster',
+    component: CreateAzureCloudCluster,
     meta: {
       menuId: 'CLUSTER',
       hideMenu: true,
@@ -154,6 +224,18 @@ export default [
     path: 'clusters/import/google-cloud',
     name: 'importGoogleCluster',
     component: ImportGoogleCluster,
+    props: true,
+    meta: {
+      menuId: 'CLUSTER',
+      title: window.i18n.t('cluster.create.title.import'),
+      hideMenu: true,
+    },
+  },
+  // 导入集群 - bk-sops
+  {
+    path: 'clusters/import/bk-sops',
+    name: 'importBkSopsCluster',
+    component: importBkSopsCluster,
     props: true,
     meta: {
       menuId: 'CLUSTER',
@@ -292,21 +374,8 @@ export default [
     beforeEnter(to, from, next) {
       const clusterList = $store.state.cluster.clusterList as ICluster[];
       const cluster = clusterList.find(item => item.clusterID === to.params.clusterId);
-      let name = '';
-      // 优化,增加azureCA,huawei节点新建
-      switch (cluster?.provider) {
-        case 'gcpCloud':
-          name = 'googleNodePool';
-          break;
-        case 'azureCloud':
-          name = 'azureNodePool';
-          break;
-        case 'huaweiCloud':
-          name = 'huaweiNodePool';
-          break;
-      }
-      name ? next({
-        name,
+      cluster?.provider && nodePoolRouterMap[cluster.provider] ? next({
+        name: nodePoolRouterMap[cluster.provider],
         params: { ...to.params },
         query: { ...to.query },
       }) : next();
@@ -324,21 +393,8 @@ export default [
     beforeEnter(to, from, next) {
       const clusterList = $store.state.cluster.clusterList as ICluster[];
       const cluster = clusterList.find(item => item.clusterID === to.params.clusterId);
-      let name = '';
-      // 优化，增加azureCA,huaweiCA节点配置
-      switch (cluster?.provider) {
-        case 'gcpCloud':
-          name = 'googleEditNodePool';
-          break;
-        case 'azureCloud':
-          name = 'azureEditNodePool';
-          break;
-        case 'huaweiCloud':
-          name = 'huaweiEditNodePool';
-          break;
-      }
-      name ? next({
-        name,
+      cluster?.provider && nodePoolConfigRouterMap[cluster.provider] ? next({
+        name: nodePoolConfigRouterMap[cluster.provider],
         params: { ...to.params },
         query: { ...to.query },
       }) : next();
@@ -356,21 +412,8 @@ export default [
     beforeEnter(to, from, next) {
       const clusterList = $store.state.cluster.clusterList as ICluster[];
       const cluster = clusterList.find(item => item.clusterID === to.params.clusterId);
-      let name = '';
-      // 优化，增加azureCA,huaweiCA节点池详情
-      switch (cluster?.provider) {
-        case 'gcpCloud':
-          name = 'googleNodePoolDetail';
-          break;
-        case 'azureCloud':
-          name = 'azureNodePoolDetail';
-          break;
-        case 'huaweiCloud':
-          name = 'huaweiNodePoolDetail';
-          break;
-      }
-      name ? next({
-        name,
+      cluster?.provider && nodePoolDetailRouterMap[cluster.provider] ? next({
+        name: nodePoolDetailRouterMap[cluster.provider],
         params: { ...to.params },
         query: { ...to.query },
       }) : next();
@@ -464,6 +507,79 @@ export default [
     name: 'huaweiNodePoolDetail',
     props: true,
     component: HuaweiNodePoolDetail,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  // 批量设置（标签或污点）
+  {
+    path: 'clusters/:clusterId/nodes/setting/:type',
+    name: 'batchSettingNode',
+    props: route => ({ ...route.query, ...route.params }),
+    component: batchSettingNode,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  // aws ca
+  {
+    path: 'cluster/:clusterId/aws/nodepools',
+    name: 'awsNodePool',
+    props: true,
+    component: AwsNodePool,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  {
+    path: 'cluster/:clusterId/aws/nodepools/:nodeGroupID',
+    name: 'awsEditNodePool',
+    props: true,
+    component: AwsEditNodePool,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  {
+    path: 'cluster/:clusterId/aws/nodepools/:nodeGroupID/detail',
+    name: 'awsNodePoolDetail',
+    props: true,
+    component: AwsNodePoolDetail,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  // k8s ca
+  {
+    path: 'cluster/:clusterId/k8s/nodepools',
+    name: 'bluekingNodePool',
+    props: true,
+    component: BluekingNodePool,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  {
+    path: 'cluster/:clusterId/k8s/nodepools/:nodeGroupID',
+    name: 'bluekingEditNodePool',
+    props: true,
+    component: BluekingEditNodePool,
+    meta: {
+      menuId: 'CLUSTER',
+      hideMenu: true,
+    },
+  },
+  {
+    path: 'cluster/:clusterId/k8s/nodepools/:nodeGroupID/detail',
+    name: 'bluekingNodePoolDetail',
+    props: true,
+    component: BluekingNodePoolDetail,
     meta: {
       menuId: 'CLUSTER',
       hideMenu: true,

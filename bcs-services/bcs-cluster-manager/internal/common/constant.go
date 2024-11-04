@@ -46,6 +46,8 @@ var (
 	Project ResourceType = "project"
 	// Task type
 	Task ResourceType = "task"
+	// Account type
+	Account ResourceType = "account"
 )
 
 // NodeType node type
@@ -241,6 +243,11 @@ const (
 	// CloudClusterTypeNative cloud cluster type for ECK native
 	CloudClusterTypeNative = "K8SEXTENSION_NATIVE"
 
+	// CloudClusterNodeGroupTypeSystem AKS NodeGroup type System
+	CloudClusterNodeGroupTypeSystem = "System"
+	// CloudClusterNodeGroupTypeUser AKS NodeGroup type User
+	CloudClusterNodeGroupTypeUser = "User"
+
 	// NodeRoleMaster node role master
 	NodeRoleMaster = "MASTER_ETCD"
 	// NodeRoleWorker node role worker
@@ -266,6 +273,10 @@ const (
 	VpcCni = "VPC-CNI"
 	// CiliumOverlay cilium plugin
 	CiliumOverlay = "CiliumOverlay"
+	// AzureCniOverlay Azure Cni overlay plugin
+	AzureCniOverlay = "AzureCniOverlay"
+	// AzureCniNodeSubnet Azure Cni node subnet plugin
+	AzureCniNodeSubnet = "AzureCniNodeSubnet"
 
 	// KubeletRootDirPath root-dir default path
 	KubeletRootDirPath = "/data/bcs/service/kubelet"
@@ -327,12 +338,20 @@ const (
 	KubeConfigImport = "kubeConfig"
 	// CloudImport import
 	CloudImport = "cloud"
+	// MachineImport machine import
+	MachineImport = "machine"
+
 	// ImportType cloud import type
 	ImportType = "importType"
 	// ClusterResourceGroup cluster resource group
 	ClusterResourceGroup = "clusterResourceGroup"
+	// ClusterMachineImportNodes import nodes
+	ClusterMachineImportNodes = "clusterMachineImportNodes"
+
 	// NodeResourceGroup xxx
 	NodeResourceGroup = "nodeResourceGroup"
+	// NetworkResourceGroup network resource group
+	NetworkResourceGroup = "networkResourceGroup"
 
 	// CloudProjectId cloud project id
 	CloudProjectId = "cloudProjectId"

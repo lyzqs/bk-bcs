@@ -379,6 +379,12 @@ func NewClusterManagerEndpoints() []*api.Endpoint {
 			Handler: "rpc",
 		},
 		{
+			Name:    "ClusterManager.RecommendNodeGroupConf",
+			Path:    []string{"/clustermanager/v1/cloud/{cloudID}/recommendNodeGroupConf"},
+			Method:  []string{"GET"},
+			Handler: "rpc",
+		},
+		{
 			Name:    "ClusterManager.MoveNodesToGroup",
 			Path:    []string{"/clustermanager/v1/nodegroup/{nodeGroupID}/node"},
 			Method:  []string{"POST"},
@@ -646,6 +652,12 @@ func NewClusterManagerEndpoints() []*api.Endpoint {
 			Name:    "ClusterManager.VerifyCloudAccount",
 			Path:    []string{"/clustermanager/v1/clouds/{cloudID}/accounts/available"},
 			Method:  []string{"POST"},
+			Handler: "rpc",
+		},
+		{
+			Name:    "ClusterManager.GetServiceRoles",
+			Path:    []string{"/clustermanager/v1/clouds/{cloudID}/serviceroles"},
+			Method:  []string{"GET"},
 			Handler: "rpc",
 		},
 		{
@@ -964,6 +976,7 @@ type ClusterManagerService interface {
 	GetNodeGroup(ctx context.Context, in *GetNodeGroupRequest, opts ...client.CallOption) (*GetNodeGroupResponse, error)
 	ListClusterNodeGroup(ctx context.Context, in *ListClusterNodeGroupRequest, opts ...client.CallOption) (*ListClusterNodeGroupResponse, error)
 	ListNodeGroup(ctx context.Context, in *ListNodeGroupRequest, opts ...client.CallOption) (*ListNodeGroupResponse, error)
+	RecommendNodeGroupConf(ctx context.Context, in *RecommendNodeGroupConfReq, opts ...client.CallOption) (*RecommendNodeGroupConfResp, error)
 	MoveNodesToGroup(ctx context.Context, in *MoveNodesToGroupRequest, opts ...client.CallOption) (*MoveNodesToGroupResponse, error)
 	RemoveNodesFromGroup(ctx context.Context, in *RemoveNodesFromGroupRequest, opts ...client.CallOption) (*RemoveNodesFromGroupResponse, error)
 	CleanNodesInGroup(ctx context.Context, in *CleanNodesInGroupRequest, opts ...client.CallOption) (*CleanNodesInGroupResponse, error)
@@ -1015,6 +1028,7 @@ type ClusterManagerService interface {
 	ListCloudAccountToPerm(ctx context.Context, in *ListCloudAccountPermRequest, opts ...client.CallOption) (*ListCloudAccountPermResponse, error)
 	VerifyCloudAccount(ctx context.Context, in *VerifyCloudAccountRequest, opts ...client.CallOption) (*VerifyCloudAccountResponse, error)
 	// Cloud Resource management
+	GetServiceRoles(ctx context.Context, in *GetServiceRolesRequest, opts ...client.CallOption) (*GetServiceRolesResponse, error)
 	GetResourceGroups(ctx context.Context, in *GetResourceGroupsRequest, opts ...client.CallOption) (*GetResourceGroupsResponse, error)
 	GetCloudRegions(ctx context.Context, in *GetCloudRegionsRequest, opts ...client.CallOption) (*GetCloudRegionsResponse, error)
 	GetCloudRegionZones(ctx context.Context, in *GetCloudRegionZonesRequest, opts ...client.CallOption) (*GetCloudRegionZonesResponse, error)
@@ -1658,6 +1672,16 @@ func (c *clusterManagerService) ListNodeGroup(ctx context.Context, in *ListNodeG
 	return out, nil
 }
 
+func (c *clusterManagerService) RecommendNodeGroupConf(ctx context.Context, in *RecommendNodeGroupConfReq, opts ...client.CallOption) (*RecommendNodeGroupConfResp, error) {
+	req := c.c.NewRequest(c.name, "ClusterManager.RecommendNodeGroupConf", in)
+	out := new(RecommendNodeGroupConfResp)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *clusterManagerService) MoveNodesToGroup(ctx context.Context, in *MoveNodesToGroupRequest, opts ...client.CallOption) (*MoveNodesToGroupResponse, error) {
 	req := c.c.NewRequest(c.name, "ClusterManager.MoveNodesToGroup", in)
 	out := new(MoveNodesToGroupResponse)
@@ -2101,6 +2125,16 @@ func (c *clusterManagerService) ListCloudAccountToPerm(ctx context.Context, in *
 func (c *clusterManagerService) VerifyCloudAccount(ctx context.Context, in *VerifyCloudAccountRequest, opts ...client.CallOption) (*VerifyCloudAccountResponse, error) {
 	req := c.c.NewRequest(c.name, "ClusterManager.VerifyCloudAccount", in)
 	out := new(VerifyCloudAccountResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *clusterManagerService) GetServiceRoles(ctx context.Context, in *GetServiceRolesRequest, opts ...client.CallOption) (*GetServiceRolesResponse, error) {
+	req := c.c.NewRequest(c.name, "ClusterManager.GetServiceRoles", in)
+	out := new(GetServiceRolesResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -2585,6 +2619,7 @@ type ClusterManagerHandler interface {
 	GetNodeGroup(context.Context, *GetNodeGroupRequest, *GetNodeGroupResponse) error
 	ListClusterNodeGroup(context.Context, *ListClusterNodeGroupRequest, *ListClusterNodeGroupResponse) error
 	ListNodeGroup(context.Context, *ListNodeGroupRequest, *ListNodeGroupResponse) error
+	RecommendNodeGroupConf(context.Context, *RecommendNodeGroupConfReq, *RecommendNodeGroupConfResp) error
 	MoveNodesToGroup(context.Context, *MoveNodesToGroupRequest, *MoveNodesToGroupResponse) error
 	RemoveNodesFromGroup(context.Context, *RemoveNodesFromGroupRequest, *RemoveNodesFromGroupResponse) error
 	CleanNodesInGroup(context.Context, *CleanNodesInGroupRequest, *CleanNodesInGroupResponse) error
@@ -2636,6 +2671,7 @@ type ClusterManagerHandler interface {
 	ListCloudAccountToPerm(context.Context, *ListCloudAccountPermRequest, *ListCloudAccountPermResponse) error
 	VerifyCloudAccount(context.Context, *VerifyCloudAccountRequest, *VerifyCloudAccountResponse) error
 	// Cloud Resource management
+	GetServiceRoles(context.Context, *GetServiceRolesRequest, *GetServiceRolesResponse) error
 	GetResourceGroups(context.Context, *GetResourceGroupsRequest, *GetResourceGroupsResponse) error
 	GetCloudRegions(context.Context, *GetCloudRegionsRequest, *GetCloudRegionsResponse) error
 	GetCloudRegionZones(context.Context, *GetCloudRegionZonesRequest, *GetCloudRegionZonesResponse) error
@@ -2756,6 +2792,7 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 		GetNodeGroup(ctx context.Context, in *GetNodeGroupRequest, out *GetNodeGroupResponse) error
 		ListClusterNodeGroup(ctx context.Context, in *ListClusterNodeGroupRequest, out *ListClusterNodeGroupResponse) error
 		ListNodeGroup(ctx context.Context, in *ListNodeGroupRequest, out *ListNodeGroupResponse) error
+		RecommendNodeGroupConf(ctx context.Context, in *RecommendNodeGroupConfReq, out *RecommendNodeGroupConfResp) error
 		MoveNodesToGroup(ctx context.Context, in *MoveNodesToGroupRequest, out *MoveNodesToGroupResponse) error
 		RemoveNodesFromGroup(ctx context.Context, in *RemoveNodesFromGroupRequest, out *RemoveNodesFromGroupResponse) error
 		CleanNodesInGroup(ctx context.Context, in *CleanNodesInGroupRequest, out *CleanNodesInGroupResponse) error
@@ -2801,6 +2838,7 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 		ListCloudAccount(ctx context.Context, in *ListCloudAccountRequest, out *ListCloudAccountResponse) error
 		ListCloudAccountToPerm(ctx context.Context, in *ListCloudAccountPermRequest, out *ListCloudAccountPermResponse) error
 		VerifyCloudAccount(ctx context.Context, in *VerifyCloudAccountRequest, out *VerifyCloudAccountResponse) error
+		GetServiceRoles(ctx context.Context, in *GetServiceRolesRequest, out *GetServiceRolesResponse) error
 		GetResourceGroups(ctx context.Context, in *GetResourceGroupsRequest, out *GetResourceGroupsResponse) error
 		GetCloudRegions(ctx context.Context, in *GetCloudRegionsRequest, out *GetCloudRegionsResponse) error
 		GetCloudRegionZones(ctx context.Context, in *GetCloudRegionZonesRequest, out *GetCloudRegionZonesResponse) error
@@ -3190,6 +3228,12 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 		Handler: "rpc",
 	}))
 	opts = append(opts, api.WithEndpoint(&api.Endpoint{
+		Name:    "ClusterManager.RecommendNodeGroupConf",
+		Path:    []string{"/clustermanager/v1/cloud/{cloudID}/recommendNodeGroupConf"},
+		Method:  []string{"GET"},
+		Handler: "rpc",
+	}))
+	opts = append(opts, api.WithEndpoint(&api.Endpoint{
 		Name:    "ClusterManager.MoveNodesToGroup",
 		Path:    []string{"/clustermanager/v1/nodegroup/{nodeGroupID}/node"},
 		Method:  []string{"POST"},
@@ -3457,6 +3501,12 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 		Name:    "ClusterManager.VerifyCloudAccount",
 		Path:    []string{"/clustermanager/v1/clouds/{cloudID}/accounts/available"},
 		Method:  []string{"POST"},
+		Handler: "rpc",
+	}))
+	opts = append(opts, api.WithEndpoint(&api.Endpoint{
+		Name:    "ClusterManager.GetServiceRoles",
+		Path:    []string{"/clustermanager/v1/clouds/{cloudID}/serviceroles"},
+		Method:  []string{"GET"},
 		Handler: "rpc",
 	}))
 	opts = append(opts, api.WithEndpoint(&api.Endpoint{
@@ -3940,6 +3990,10 @@ func (h *clusterManagerHandler) ListNodeGroup(ctx context.Context, in *ListNodeG
 	return h.ClusterManagerHandler.ListNodeGroup(ctx, in, out)
 }
 
+func (h *clusterManagerHandler) RecommendNodeGroupConf(ctx context.Context, in *RecommendNodeGroupConfReq, out *RecommendNodeGroupConfResp) error {
+	return h.ClusterManagerHandler.RecommendNodeGroupConf(ctx, in, out)
+}
+
 func (h *clusterManagerHandler) MoveNodesToGroup(ctx context.Context, in *MoveNodesToGroupRequest, out *MoveNodesToGroupResponse) error {
 	return h.ClusterManagerHandler.MoveNodesToGroup(ctx, in, out)
 }
@@ -4118,6 +4172,10 @@ func (h *clusterManagerHandler) ListCloudAccountToPerm(ctx context.Context, in *
 
 func (h *clusterManagerHandler) VerifyCloudAccount(ctx context.Context, in *VerifyCloudAccountRequest, out *VerifyCloudAccountResponse) error {
 	return h.ClusterManagerHandler.VerifyCloudAccount(ctx, in, out)
+}
+
+func (h *clusterManagerHandler) GetServiceRoles(ctx context.Context, in *GetServiceRolesRequest, out *GetServiceRolesResponse) error {
+	return h.ClusterManagerHandler.GetServiceRoles(ctx, in, out)
 }
 
 func (h *clusterManagerHandler) GetResourceGroups(ctx context.Context, in *GetResourceGroupsRequest, out *GetResourceGroupsResponse) error {

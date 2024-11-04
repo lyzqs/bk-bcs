@@ -33,6 +33,7 @@ var NoAuthMethod = []string{
 
 	// nodeGroup resource
 	"ClusterManager.GetExternalNodeScriptByGroupID",
+	"ClusterManager.RecommendNodeGroupConf",
 
 	// cloud template
 	"ClusterManager.GetCloud",
@@ -69,6 +70,7 @@ var NoAuthMethod = []string{
 	"ClusterManager.CreateCloudAccount",
 	"ClusterManager.ListCloudAccount",
 	"ClusterManager.ListCloudAccountToPerm",
+	"ClusterManager.GetServiceRoles",
 
 	// cloud module flag
 	"ClusterManager.ListCloudModuleFlag",
@@ -91,7 +93,7 @@ var NoAuthMethod = []string{
 
 	"ClusterManager.ListOperationLogs",
 	"ClusterManager.ListTaskStepLogs",
-	"ClusterManager.TaskRecords",
+	"ClusterManager.ListTaskRecords",
 	"ClusterManager.ListResourceSchema",
 	"ClusterManager.GetResourceSchema",
 
@@ -178,6 +180,7 @@ var ActionPermissions = map[string]string{
 	"ClusterManager.ListNodesInGroup":       cluster.CanViewClusterOperation,
 	"ClusterManager.ListNodesInGroupV2":     cluster.CanViewClusterOperation,
 	"ClusterManager.UpdateGroupAsTimeRange": cluster.CanManageClusterOperation,
+	"ClusterManager.RecommendNodeGroupConf": "",
 
 	"ClusterManager.UpdateGroupDesiredNode":         cluster.CanManageClusterOperation,
 	"ClusterManager.UpdateGroupDesiredSize":         cluster.CanManageClusterOperation,
@@ -235,6 +238,7 @@ var ActionPermissions = map[string]string{
 	"ClusterManager.ListCloudAccount":    cloudaccount.CanUseCloudAccountOperation,
 	"ClusterManager.MigrateCloudAccount": "",
 	"ClusterManager.VerifyCloudAccount":  "",
+	"ClusterManager.GetServiceRoles":     "",
 
 	// cloud component paras
 	"ClusterManager.CreateCloudModuleFlag": "",

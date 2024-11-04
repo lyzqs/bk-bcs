@@ -14,12 +14,14 @@ package argocd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	bcsapi "github.com/Tencent/bk-bcs/bcs-common/pkg/bcsapiv4"
@@ -29,11 +31,13 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/internal/dao"
+	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/common"
 	mw "github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/proxy/argocd/middleware"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/proxy/argocd/middleware/ctxutils"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/proxy/argocd/permitcheck"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/proxy/argocd/resources"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/store"
+	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/store/secretstore"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/utils"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/utils/jsonq"
 )
@@ -46,6 +50,7 @@ type AppPlugin struct {
 	middleware    mw.MiddlewareInterface
 	permitChecker permitcheck.PermissionInterface
 	bcsStorage    bcsapi.Storage
+	secretStore   secretstore.SecretInterface
 }
 
 // all argocd application URL:
@@ -117,6 +122,10 @@ func (plugin *AppPlugin) Init() error {
 		Handler(plugin.middleware.HttpWrapper(plugin.applicationParameters))
 	appRouter.Path("/workload_replicas_zero").Methods("PUT").
 		Handler(plugin.middleware.HttpWrapper(plugin.applicationWorkloadReplicasZero))
+	appRouter.Path("/sync_refresh").Methods("GET").
+		Handler(plugin.middleware.HttpWrapper(plugin.syncRefresh))
+	appRouter.Path("/forbid_sync").Methods("POST").
+		Handler(plugin.middleware.HttpWrapper(plugin.forbidAppSync))
 
 	appRouter.PathPrefix("").Methods("PUT", "POST", "DELETE", "PATCH").
 		Handler(plugin.middleware.HttpWrapper(plugin.applicationEditHandler))
@@ -164,14 +173,43 @@ func (plugin *AppPlugin) listApplicationsHandler(r *http.Request) (*http.Request
 	if len(projects) == 0 {
 		return r, mw.ReturnErrorResponse(http.StatusBadRequest, fmt.Errorf("query param 'projects' cannot be empty"))
 	}
-	appList, statusCode, err := plugin.middleware.ListApplications(r.Context(), &appclient.ApplicationQuery{
-		Projects: projects,
-	})
-	if err != nil {
-		return r, mw.ReturnErrorResponse(statusCode, errors.Wrapf(err, "list applications by project '%v' from "+
-			"storage failed", projects))
+	query := &appclient.ApplicationQuery{Projects: projects}
+	repo := r.URL.Query().Get("repo")
+	if repo != "" {
+		query.Repo = &repo
 	}
-
+	targetRevision := r.URL.Query().Get("targetRevision")
+	if targetRevision != "" && repo == "" {
+		return r, mw.ReturnErrorResponse(http.StatusBadRequest,
+			fmt.Errorf("query param 'repo' cannot be empty when target revision is not empty"))
+	}
+	selectors := r.URL.Query()["selector"]
+	appList := &v1alpha1.ApplicationList{Items: make([]v1alpha1.Application, 0)}
+	if len(selectors) != 0 {
+		for _, selector := range selectors {
+			query.Selector = &selector
+			apps, statusCode, err := plugin.middleware.ListApplications(r.Context(), query)
+			if err != nil {
+				return r, mw.ReturnErrorResponse(statusCode, errors.Wrapf(err, "list applications by project '%v' from "+
+					"storage failed", projects))
+			}
+			if len(apps.Items) != 0 {
+				appList.ListMeta = apps.ListMeta
+				appList.TypeMeta = apps.TypeMeta
+				appList.Items = append(appList.Items, apps.Items...)
+			}
+		}
+	} else {
+		apps, statusCode, err := plugin.middleware.ListApplications(r.Context(), query)
+		if err != nil {
+			return r, mw.ReturnErrorResponse(statusCode, errors.Wrapf(err, "list applications by project '%v' from "+
+				"storage failed", projects))
+		}
+		appList = apps
+	}
+	if targetRevision != "" {
+		filterAppsByTargetRevision(appList, targetRevision, repo)
+	}
 	fields := r.URL.Query().Get("fields")
 	if fields == "" {
 		return r, mw.ReturnJSONResponse(appList)
@@ -376,13 +414,32 @@ func (plugin *AppPlugin) customRevisionsMetadata(r *http.Request) (*http.Request
 				fmt.Errorf("query parameter 'revisions' has empty value"))
 		}
 	}
+	repos, err := plugin.checkRepos(argoApp, revisions)
+	if err != nil {
+		return r, mw.ReturnErrorResponse(http.StatusBadRequest, err)
+	}
 
+	revisionsMetadata, err := plugin.storage.GetApplicationRevisionsMetadata(r.Context(), repos, revisions)
+	if err != nil {
+		return r, mw.ReturnErrorResponse(http.StatusInternalServerError,
+			fmt.Errorf("get application revisions metadata failed: %s", err.Error()))
+	}
+	return r, mw.ReturnJSONResponse(&ApplicationRevisionsMetadata{
+		Code:      0,
+		RequestID: ctxutils.RequestID(r.Context()),
+		Data:      revisionsMetadata,
+	})
+}
+
+func (plugin *AppPlugin) checkRepos(argoApp *v1alpha1.Application, revisions []string) ([]string, error) {
 	repos := make([]string, 0)
 	if argoApp.Spec.HasMultipleSources() && len(argoApp.Spec.Sources) == len(revisions) {
 		for _, source := range argoApp.Spec.Sources {
 			repos = append(repos, source.RepoURL)
 		}
-	} else if argoApp.Spec.HasMultipleSources() && len(argoApp.Spec.Sources) != len(revisions) {
+		return repos, nil
+	}
+	if argoApp.Spec.HasMultipleSources() && len(argoApp.Spec.Sources) != len(revisions) {
 		// 兼容应用从 SingleSource 与 MultipleSource 互相转换的情况
 		found := false
 		for i := range argoApp.Status.History {
@@ -408,26 +465,16 @@ func (plugin *AppPlugin) customRevisionsMetadata(r *http.Request) (*http.Request
 			}
 		}
 		if !found {
-			return r, mw.ReturnErrorResponse(http.StatusBadRequest, fmt.Errorf("application has multiple(%d) "+
-				"sources, not same as query param 'revisions'", len(argoApp.Spec.Sources)))
+			return nil, fmt.Errorf("application has multiple(%d) "+"sources, not same as query param 'revisions'",
+				len(argoApp.Spec.Sources))
 		}
-	} else {
-		if len(revisions) != 1 {
-			return r, mw.ReturnErrorResponse(http.StatusBadRequest, fmt.Errorf("application has single source"))
-		}
-		repos = append(repos, argoApp.Spec.Source.RepoURL)
+		return repos, nil
 	}
-
-	revisionsMetadata, err := plugin.storage.GetApplicationRevisionsMetadata(r.Context(), repos, revisions)
-	if err != nil {
-		return r, mw.ReturnErrorResponse(http.StatusInternalServerError,
-			fmt.Errorf("get application revisions metadata failed: %s", err.Error()))
+	if len(revisions) != 1 {
+		return nil, fmt.Errorf("application has single source")
 	}
-	return r, mw.ReturnJSONResponse(&ApplicationRevisionsMetadata{
-		Code:      0,
-		RequestID: ctxutils.RequestID(r.Context()),
-		Data:      revisionsMetadata,
-	})
+	repos = append(repos, argoApp.Spec.Source.RepoURL)
+	return repos, nil
 }
 
 type parameterAction string
@@ -597,4 +644,150 @@ func (plugin *AppPlugin) applicationWorkloadReplicasZero(r *http.Request) (*http
 			errors.Errorf("patch application workload to 0 failed: %s", strings.Join(errs, ", ")))
 	}
 	return r, mw.ReturnJSONResponse("ok")
+}
+
+func (plugin *AppPlugin) syncRefresh(r *http.Request) (*http.Request, *mw.HttpResponse) {
+	appName := mux.Vars(r)["name"]
+	if appName == "" {
+		return r, mw.ReturnErrorResponse(http.StatusBadRequest,
+			fmt.Errorf("request application name cannot be empty"))
+	}
+	argoApp, statusCode, err := plugin.permitChecker.CheckApplicationPermission(r.Context(), appName,
+		permitcheck.AppViewRSAction)
+	if err != nil {
+		return r, mw.ReturnErrorResponse(statusCode, err)
+	}
+	r = plugin.setApplicationAudit(r, argoApp.Spec.Project, appName, ctxutils.ApplicationRefresh, ctxutils.EmptyData)
+
+	// refresh application
+	argoAppClient := plugin.storage.GetAppClient()
+	refreshType := string(v1alpha1.RefreshTypeNormal)
+	if _, err = argoAppClient.Get(r.Context(), &appclient.ApplicationQuery{
+		Name:    &appName,
+		Refresh: &refreshType,
+	}); err != nil {
+		return r, mw.ReturnErrorResponse(http.StatusInternalServerError, errors.Wrapf(err,
+			"refresh application '%s' failed", appName))
+	}
+	// get remote repo last-commit-id
+	lastCommitIDs, err := plugin.getApplicationLastCommitIDs(r.Context(), argoApp)
+	if err != nil {
+		// we cannot check without clone repo if targetRevision is just a commit-hash, just sleep 5 seconds
+		blog.Warnf("RequestID[%s] got last-commit for '%s' failed: %s", ctxutils.
+			RequestID(r.Context()), appName, err)
+		time.Sleep(5 * time.Second)
+		return r, mw.ReturnJSONResponse(argoApp)
+	}
+	blog.Infof("RequestID[%s] got the last-commit-ids: %v", ctxutils.RequestID(r.Context()), lastCommitIDs)
+	// ticker for check application got the latest commit-id
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			argoApp, err = plugin.storage.GetApplication(r.Context(), appName)
+			if err != nil {
+				return r, mw.ReturnErrorResponse(http.StatusInternalServerError, err)
+			}
+			if !argoApp.Spec.HasMultipleSources() {
+				if len(lastCommitIDs) != 1 {
+					return r, mw.ReturnErrorResponse(http.StatusBadRequest, errors.Errorf(
+						"application with single resource got not '1' last-commit-ids '%v'", lastCommitIDs))
+				}
+				if !strings.HasPrefix(argoApp.Status.Sync.Revision, lastCommitIDs[0]) {
+					continue
+				}
+				return r, mw.ReturnJSONResponse(argoApp)
+			}
+			revisions := argoApp.Status.Sync.Revisions
+			if len(lastCommitIDs) != len(revisions) {
+				return r, mw.ReturnErrorResponse(http.StatusBadRequest, errors.Errorf(
+					"application with multi-resources got last-commit-ids '%v', not same with reivions '%v'",
+					lastCommitIDs, revisions))
+			}
+			allMatch := true
+			for i := range lastCommitIDs {
+				if !strings.HasPrefix(revisions[i], lastCommitIDs[i]) {
+					allMatch = false
+				}
+			}
+			if allMatch {
+				return r, mw.ReturnJSONResponse(argoApp)
+			}
+		case <-r.Context().Done():
+			return r, mw.ReturnErrorResponse(http.StatusBadRequest, errors.Errorf("sync-refresh timeout"))
+		}
+	}
+}
+
+func (plugin *AppPlugin) getApplicationLastCommitIDs(ctx context.Context, argoApp *v1alpha1.Application) ([]string,
+	error) {
+	lastCommitIDs := make([]string, 0)
+	if !argoApp.Spec.HasMultipleSources() {
+		repoURL := argoApp.Spec.Source.RepoURL
+		revision := argoApp.Spec.Source.TargetRevision
+		commitID, err := plugin.storage.GetRepoLastCommitID(ctx, repoURL, revision)
+		if err != nil {
+			return nil, err
+		}
+		lastCommitIDs = append(lastCommitIDs, commitID)
+		return lastCommitIDs, nil
+	}
+	for i := range argoApp.Spec.Sources {
+		source := argoApp.Spec.Sources[i]
+		repoURL := source.RepoURL
+		revision := source.TargetRevision
+		commitID, err := plugin.storage.GetRepoLastCommitID(ctx, repoURL, revision)
+		if err != nil {
+			return nil, err
+		}
+		lastCommitIDs = append(lastCommitIDs, commitID)
+	}
+	return lastCommitIDs, nil
+}
+
+func filterAppsByTargetRevision(appList *v1alpha1.ApplicationList, target string, repo string) {
+	filterApps := make([]v1alpha1.Application, 0)
+	for _, item := range appList.Items {
+		if item.Spec.HasMultipleSources() {
+			for _, source := range item.Spec.Sources {
+				if source.RepoURL == repo && source.TargetRevision == target {
+					filterApps = append(filterApps, item)
+				}
+			}
+			continue
+		}
+		if item.Spec.Source.TargetRevision == target {
+			filterApps = append(filterApps, item)
+		}
+	}
+	appList.Items = filterApps
+}
+
+func (plugin *AppPlugin) forbidAppSync(r *http.Request) (*http.Request, *mw.HttpResponse) {
+	appName := mux.Vars(r)["name"]
+	if appName == "" {
+		return r, mw.ReturnErrorResponse(http.StatusBadRequest,
+			fmt.Errorf("request application name cannot be empty"))
+	}
+	forbid := r.URL.Query()["forbid"]
+	if len(forbid) == 0 {
+		return r, mw.ReturnErrorResponse(http.StatusBadRequest,
+			fmt.Errorf("param forbid must not empty"))
+	}
+	app, err := plugin.storage.GetApplication(r.Context(), appName)
+	if err != nil {
+		return r, mw.ReturnErrorResponse(http.StatusInternalServerError, err)
+	}
+	annotations := make(map[string]interface{})
+	if forbid[0] == "false" {
+		annotations[common.ApplicationSyncForbidden] = nil
+	} else {
+		annotations[common.ApplicationSyncForbidden] = "true"
+	}
+	if err := plugin.storage.PatchApplicationAnnotation(
+		r.Context(), app.Name, app.Namespace, annotations); err != nil {
+		return r, mw.ReturnErrorResponse(http.StatusInternalServerError, err)
+	}
+	return r, mw.ReturnJSONResponse(map[string]string{"forbid": forbid[0]})
 }

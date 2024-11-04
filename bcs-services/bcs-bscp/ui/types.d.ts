@@ -20,3 +20,5 @@ declare module 'bkui-vue/dist/locale/zh-cn.esm';
 declare module 'bkui-vue/dist/locale/en.esm';
 declare module '@blueking/login-modal';
 declare module '@blueking/platform-config';
+declare module 'vue-virtual-scroller';
+declare module 'node-forge';

@@ -32,6 +32,7 @@ import (
 	mw "github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/proxy/argocd/middleware"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/proxy/argocd/permitcheck"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/store"
+	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/store/secretstore"
 	"github.com/Tencent/bk-bcs/bcs-scenarios/bcs-gitops-manager/pkg/store/terraformstore"
 )
 
@@ -123,6 +124,7 @@ func (ops *ArgocdProxy) initArgoPathHandler() error {
 		middleware:    middleware,
 		permitChecker: permitChecker,
 		bcsStorage:    bcsStorage,
+		secretStore:   secretstore.NewSecretStore(options.GlobalOptions().SecretServer),
 	}
 	appsetPlugin := &ApplicationSetPlugin{
 		storage:       store.GlobalStore(),
@@ -194,11 +196,16 @@ func (ops *ArgocdProxy) initArgoPathHandler() error {
 		middleware:    middleware,
 		permitChecker: permitChecker,
 	}
+	preCheckPlugin := &PreCheckPlugin{
+		Router:        ops.PathPrefix(common.GitOpsProxyURL + "/api/v1/precheck").Subrouter(),
+		middleware:    middleware,
+		permitChecker: permitChecker,
+	}
 	initializer := []func() error{
 		auditPlugin.Init, projectPlugin.Init, clusterPlugin.Init, repositoryPlugin.Init,
 		appPlugin.Init, streamPlugin.Init, webhookPlugin.Init, grpcPlugin.Init,
 		secretPlugin.Init, metricPlugin.Init, appsetPlugin.Init, analysisPlugin.Init,
-		monitorPlugin.Init, terraformPlugin.Init, permissionPlugin.Init, workflowPlugin.Init,
+		monitorPlugin.Init, terraformPlugin.Init, permissionPlugin.Init, workflowPlugin.Init, preCheckPlugin.Init,
 	}
 
 	// access deny URL, keep in mind that there are paths need to proxy

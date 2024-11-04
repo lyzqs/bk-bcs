@@ -28,7 +28,7 @@ export const getDefaultConfigScriptData = () => ({
  */
 export const getConfigList = (biz_id: string, app_id: number, query: ICommonQuery) =>
   http
-    .get(`/config/biz/${biz_id}/apps/${app_id}/config_items`, { params: { ...query, with_status: true } })
+    .post(`/config/biz/${biz_id}/apps/${app_id}/config_items`, { ...query, with_status: true })
     .then((res) => res.data);
 
 /**
@@ -182,11 +182,7 @@ export const downloadConfigContent = (bizId: string, appId: number, signature: s
  * @param signature 文件内容的SHA256值
  * @returns
  */
-export const getConfigUploadFileIsExist = (
-  bizId: string,
-  appId: number,
-  signature: string,
-) =>
+export const getConfigUploadFileIsExist = (bizId: string, appId: number, signature: string) =>
   http
     .get(`/biz/${bizId}/content/metadata`, {
       headers: {
@@ -415,9 +411,19 @@ export const updateBoundTemplateVersion = (
  * @returns
  */
 export const deleteBoundPkg = (bizId: string, appId: number, bindingId: number, template_set_ids: number[]) =>
-  http.delete(`/config/biz/${bizId}/apps/${appId}/template_bindings/${bindingId}/template_sets`, {
+  http.delete(`/config/biz/${bizId}/apps/${appId}/template_bindings/${bindingId}/template_set`, {
     params: { template_set_ids: template_set_ids.join(',') },
   });
+
+/**
+ * 删除服务下绑定的模板套餐
+ * @param bizId 业务ID
+ * @param appId 应用ID
+ * @param id 配置ID
+ * @returns
+ */
+export const deleteCurrBoundPkg = (bizId: string, appId: number, id: number) =>
+  http.delete(`/config/biz/${bizId}/apps/${appId}/template_set/${id}`);
 
 /**
  * 导入非模板配置文件压缩包
@@ -473,7 +479,7 @@ export const createKv = (bizId: string, appId: number, kv: any) =>
  * @returns
  */
 export const getKvList = (bizId: string, appId: number, query: ICommonQuery) =>
-  http.get(`/config/biz/${bizId}/apps/${appId}/kvs`, { params: query }).then((res) => res.data);
+  http.post(`/config/biz/${bizId}/apps/${appId}/kvs/list`, query).then((res) => res.data);
 
 /**
  * 更新kv
@@ -483,8 +489,12 @@ export const getKvList = (bizId: string, appId: number, query: ICommonQuery) =>
  * @param value 配置值
  * @returns
  */
-export const updateKv = (bizId: string, appId: number, key: string, value: string, memo: string) =>
-  http.put(`/config/biz/${bizId}/apps/${appId}/kvs/${key}`, { value, memo });
+export const updateKv = (
+  bizId: string,
+  appId: number,
+  key: string,
+  editContent: { value: string; memo: string; secret_hidden?: boolean },
+) => http.put(`/config/biz/${bizId}/apps/${appId}/kvs/${key}`, editContent);
 
 /**
  * 删除kv
@@ -501,9 +511,10 @@ export const deleteKv = (bizId: string, appId: number, configId: number) =>
  * @param bizId 业务ID
  * @param appId 应用ID
  * @param ids 配置项ID列表
+ * @param exclusion_operation 是否跨页
  */
-export const batchDeleteKv = (bizId: string, appId: number, ids: number[]) =>
-  http.post(`config/biz/${bizId}/apps/${appId}/kvs/batch_delete`, { ids });
+export const batchDeleteKv = (bizId: string, appId: number, ids: number[], exclusion_operation: boolean) =>
+  http.post(`config/biz/${bizId}/apps/${appId}/kvs/batch_delete`, { ids, exclusion_operation });
 
 /**
  * 获取已发布kv
@@ -653,3 +664,14 @@ export const importKvFormYaml = (bizId: string, appId: number, content: string) 
  */
 export const createVersionNameCheck = (bizId: string, appId: number, name: string) =>
   http.get(`/config/biz_id/${bizId}/app_id/${appId}/release/${name}/check`);
+
+/**
+ * 从配置模板导入配置文件
+ * @param bizId 业务ID
+ * @param appId 应用ID
+ * @param bindingId 模板和服务绑定关系ID
+ * @param params 更新参数
+ * @returns
+ */
+export const importConfigFromTemplate = (bizId: string, appId: number, query: any) =>
+  http.post(`/config/biz/${bizId}/apps/${appId}/template_bindings/import_template_set`, query);

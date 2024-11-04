@@ -17,18 +17,23 @@ export interface IMenu {
   meta?: Record<string, any>
 }
 
+export type MenuID = 'CLUSTERRESOURCE'|'WORKLOAD'|'DEPLOYMENT'|'STATEFULSET'|'DAEMONSET'|'JOB'|'CRONJOB'|'POD'|'NETWORK'|'INGRESS'|'SERVICE'|'ENDPOINTS'|'CONFIGURATION'|'CONFIGMAP'|'SECRET'|'STORAGE'|'PERSISTENTVOLUME'|'PERSISTENTVOLUMECLAIM'|'STORAGECLASS'|'RBAC'|'SERVICEACCOUNT'|'HORIZONTALPODAUTOSCALER'|'CRD'|'CUSTOM_RESOURCE'|'GAMEDEPLOYMENT'|'GAMESTATEFULSET'|'HOOKTEMPLATE'|'CLUSTERMANAGE'|'CLUSTER'|'NODETEMPLATE'|'DEPLOYMENTMANAGE'|'HELM'|'RELEASELIST'|'CHARTLIST'|'TEMPLATESET_v1'|'TEMPLATESET'|'TEMPLATESET_DEPLOYMENT'|'TEMPLATESET_STATEFULSET'|'TEMPLATESET_DAEMONSET'|'TEMPLATESET_JOB'|'TEMPLATESET_INGRESSE'|'TEMPLATESET_SERVICE'|'TEMPLATESET_CONFIGMAP'|'TEMPLATESET_SECRET'|'TEMPLATESET_HPA'|'TEMPLATESET_GAMEDEPLOYMENT'|'TEMPLATESET_GAMESTATEFULSET'|'TEMPLATESET_CUSTOMOBJECT'|'TEMPLATE_FILE'|'VARIABLE'|'PROJECTMANAGE'|'EVENT'|'AUDIT'|'CLOUDTOKEN'|'TENCENTCLOUD'|'TENCENTPUBLICCLOUD'|'GOOGLECLOUD'|'AZURECLOUD'|'HUAWEICLOUD'|'AMAZONCLOUD'|'PROJECT'|'PLUGINMANAGE'|'TOOLS'|'METRICS'|'LOG'|'MONITOR';
+
+export interface MenuItem {
+  title: string
+  id: MenuID
+  icon?: string
+  route?: string
+  meta?: Record<string, any>
+  children?: MenuItem[]
+}
+
 export default function useMenu() {
-  const menusData = computed(() => [
+  const menusData = computed<MenuItem[]>(() => [
     {
       title: $i18n.t('nav.dashboard'),
       id: 'CLUSTERRESOURCE',
       children: [
-        // {
-        //   title: $i18n.t('nav.namespace'),
-        //   icon: 'bcs-icon-namespace',
-        //   id: 'NAMESPACE',
-        //   route: 'dashboardNamespace',
-        // },
         {
           title: $i18n.t('nav.workload'),
           icon: 'bcs-icon-yy-apply',
@@ -231,11 +236,6 @@ export default function useMenu() {
                 kind: 'HookTemplate',
               },
             },
-            // {
-            //   title: 'CustomObjects',
-            //   route: 'dashboardCustomObjects',
-            //   id: 'CUSTOMOBJECT',
-            // },
           ],
           id: 'CUSTOM_RESOURCE',
         },
@@ -353,6 +353,12 @@ export default function useMenu() {
               id: 'TEMPLATESET_CUSTOMOBJECT',
             },
           ],
+        },
+        {
+          title: $i18n.t('nav.templateFile'),
+          id: 'TEMPLATE_FILE',
+          icon: 'bcs-icon-templete',
+          route: 'templatefile',
         },
         {
           title: $i18n.t('nav.variable'),
@@ -512,6 +518,8 @@ export default function useMenu() {
     }
     return data;
   };
+  // 所有叶子菜单项
+  const leafMenus = computed(() => flatLeafMenus(menus.value));
   const allLeafMenus = computed(() => flatLeafMenus(menusData.value));
   // 所有路由父节点只是用于分组（指向子路由），真正的菜单项是子节点
   const getCurrentMenuByRouteName = (name: string) => allLeafMenus.value
@@ -566,6 +574,7 @@ export default function useMenu() {
   };
 
   return {
+    leafMenus,
     menusData,
     menus,
     disabledMenuIDs,

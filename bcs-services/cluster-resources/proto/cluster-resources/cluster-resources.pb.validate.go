@@ -7909,6 +7909,35 @@ func (m *ViewFilter) validate(all bool) error {
 
 	}
 
+	if all {
+		switch v := interface{}(m.GetCreateSource()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ViewFilterValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ViewFilterValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCreateSource()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ViewFilterValidationError{
+				field:  "CreateSource",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return ViewFilterMultiError(errors)
 	}
@@ -7985,6 +8014,368 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ViewFilterValidationError{}
+
+// Validate checks the field values on CreateSource with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *CreateSource) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CreateSource with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in CreateSourceMultiError, or
+// nil if none found.
+func (m *CreateSource) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CreateSource) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Source
+
+	if all {
+		switch v := interface{}(m.GetTemplate()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, CreateSourceValidationError{
+					field:  "Template",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, CreateSourceValidationError{
+					field:  "Template",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetTemplate()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return CreateSourceValidationError{
+				field:  "Template",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetChart()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, CreateSourceValidationError{
+					field:  "Chart",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, CreateSourceValidationError{
+					field:  "Chart",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetChart()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return CreateSourceValidationError{
+				field:  "Chart",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return CreateSourceMultiError(errors)
+	}
+
+	return nil
+}
+
+// CreateSourceMultiError is an error wrapping multiple validation errors
+// returned by CreateSource.ValidateAll() if the designated constraints aren't met.
+type CreateSourceMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CreateSourceMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CreateSourceMultiError) AllErrors() []error { return m }
+
+// CreateSourceValidationError is the validation error returned by
+// CreateSource.Validate if the designated constraints aren't met.
+type CreateSourceValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e CreateSourceValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e CreateSourceValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e CreateSourceValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e CreateSourceValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e CreateSourceValidationError) ErrorName() string { return "CreateSourceValidationError" }
+
+// Error satisfies the builtin error interface
+func (e CreateSourceValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sCreateSource.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = CreateSourceValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = CreateSourceValidationError{}
+
+// Validate checks the field values on Template with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Template) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Template with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in TemplateMultiError, or nil
+// if none found.
+func (m *Template) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Template) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for TemplateName
+
+	// no validation rules for TemplateVersion
+
+	if len(errors) > 0 {
+		return TemplateMultiError(errors)
+	}
+
+	return nil
+}
+
+// TemplateMultiError is an error wrapping multiple validation errors returned
+// by Template.ValidateAll() if the designated constraints aren't met.
+type TemplateMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m TemplateMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m TemplateMultiError) AllErrors() []error { return m }
+
+// TemplateValidationError is the validation error returned by
+// Template.Validate if the designated constraints aren't met.
+type TemplateValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e TemplateValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e TemplateValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e TemplateValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e TemplateValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e TemplateValidationError) ErrorName() string { return "TemplateValidationError" }
+
+// Error satisfies the builtin error interface
+func (e TemplateValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sTemplate.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = TemplateValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = TemplateValidationError{}
+
+// Validate checks the field values on Chart with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Chart) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Chart with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in ChartMultiError, or nil if none found.
+func (m *Chart) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Chart) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for ChartName
+
+	if len(errors) > 0 {
+		return ChartMultiError(errors)
+	}
+
+	return nil
+}
+
+// ChartMultiError is an error wrapping multiple validation errors returned by
+// Chart.ValidateAll() if the designated constraints aren't met.
+type ChartMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ChartMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ChartMultiError) AllErrors() []error { return m }
+
+// ChartValidationError is the validation error returned by Chart.Validate if
+// the designated constraints aren't met.
+type ChartValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ChartValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ChartValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ChartValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ChartValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ChartValidationError) ErrorName() string { return "ChartValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ChartValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sChart.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ChartValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ChartValidationError{}
 
 // Validate checks the field values on CreateViewConfigReq with the rules
 // defined in the proto definition for this message. If any rules are
@@ -9217,6 +9608,8 @@ func (m *ListTemplateSpaceReq) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	// no validation rules for Name
+
 	if len(errors) > 0 {
 		return ListTemplateSpaceReqMultiError(errors)
 	}
@@ -9686,6 +10079,499 @@ var _ interface {
 	ErrorName() string
 } = DeleteTemplateSpaceReqValidationError{}
 
+// Validate checks the field values on CopyTemplateSpaceReq with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *CopyTemplateSpaceReq) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CopyTemplateSpaceReq with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// CopyTemplateSpaceReqMultiError, or nil if none found.
+func (m *CopyTemplateSpaceReq) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CopyTemplateSpaceReq) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetId()) != 24 {
+		err := CopyTemplateSpaceReqValidationError{
+			field:  "Id",
+			reason: "value length must be 24 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+
+	}
+
+	if l := utf8.RuneCountInString(m.GetProjectCode()); l < 1 || l > 32 {
+		err := CopyTemplateSpaceReqValidationError{
+			field:  "ProjectCode",
+			reason: "value length must be between 1 and 32 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	// no validation rules for Name
+
+	// no validation rules for Description
+
+	if len(errors) > 0 {
+		return CopyTemplateSpaceReqMultiError(errors)
+	}
+
+	return nil
+}
+
+// CopyTemplateSpaceReqMultiError is an error wrapping multiple validation
+// errors returned by CopyTemplateSpaceReq.ValidateAll() if the designated
+// constraints aren't met.
+type CopyTemplateSpaceReqMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CopyTemplateSpaceReqMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CopyTemplateSpaceReqMultiError) AllErrors() []error { return m }
+
+// CopyTemplateSpaceReqValidationError is the validation error returned by
+// CopyTemplateSpaceReq.Validate if the designated constraints aren't met.
+type CopyTemplateSpaceReqValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e CopyTemplateSpaceReqValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e CopyTemplateSpaceReqValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e CopyTemplateSpaceReqValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e CopyTemplateSpaceReqValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e CopyTemplateSpaceReqValidationError) ErrorName() string {
+	return "CopyTemplateSpaceReqValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e CopyTemplateSpaceReqValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sCopyTemplateSpaceReq.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = CopyTemplateSpaceReqValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = CopyTemplateSpaceReqValidationError{}
+
+// Validate checks the field values on ListTemplateSpaceCollectReq with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ListTemplateSpaceCollectReq) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListTemplateSpaceCollectReq with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListTemplateSpaceCollectReqMultiError, or nil if none found.
+func (m *ListTemplateSpaceCollectReq) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListTemplateSpaceCollectReq) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if l := utf8.RuneCountInString(m.GetProjectCode()); l < 1 || l > 32 {
+		err := ListTemplateSpaceCollectReqValidationError{
+			field:  "ProjectCode",
+			reason: "value length must be between 1 and 32 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return ListTemplateSpaceCollectReqMultiError(errors)
+	}
+
+	return nil
+}
+
+// ListTemplateSpaceCollectReqMultiError is an error wrapping multiple
+// validation errors returned by ListTemplateSpaceCollectReq.ValidateAll() if
+// the designated constraints aren't met.
+type ListTemplateSpaceCollectReqMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListTemplateSpaceCollectReqMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListTemplateSpaceCollectReqMultiError) AllErrors() []error { return m }
+
+// ListTemplateSpaceCollectReqValidationError is the validation error returned
+// by ListTemplateSpaceCollectReq.Validate if the designated constraints
+// aren't met.
+type ListTemplateSpaceCollectReqValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ListTemplateSpaceCollectReqValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ListTemplateSpaceCollectReqValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ListTemplateSpaceCollectReqValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ListTemplateSpaceCollectReqValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ListTemplateSpaceCollectReqValidationError) ErrorName() string {
+	return "ListTemplateSpaceCollectReqValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ListTemplateSpaceCollectReqValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sListTemplateSpaceCollectReq.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ListTemplateSpaceCollectReqValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ListTemplateSpaceCollectReqValidationError{}
+
+// Validate checks the field values on CreateTemplateSpaceCollectReq with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *CreateTemplateSpaceCollectReq) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CreateTemplateSpaceCollectReq with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// CreateTemplateSpaceCollectReqMultiError, or nil if none found.
+func (m *CreateTemplateSpaceCollectReq) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CreateTemplateSpaceCollectReq) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if l := utf8.RuneCountInString(m.GetProjectCode()); l < 1 || l > 32 {
+		err := CreateTemplateSpaceCollectReqValidationError{
+			field:  "ProjectCode",
+			reason: "value length must be between 1 and 32 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if l := utf8.RuneCountInString(m.GetTemplateSpaceID()); l < 1 || l > 64 {
+		err := CreateTemplateSpaceCollectReqValidationError{
+			field:  "TemplateSpaceID",
+			reason: "value length must be between 1 and 64 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return CreateTemplateSpaceCollectReqMultiError(errors)
+	}
+
+	return nil
+}
+
+// CreateTemplateSpaceCollectReqMultiError is an error wrapping multiple
+// validation errors returned by CreateTemplateSpaceCollectReq.ValidateAll()
+// if the designated constraints aren't met.
+type CreateTemplateSpaceCollectReqMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CreateTemplateSpaceCollectReqMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CreateTemplateSpaceCollectReqMultiError) AllErrors() []error { return m }
+
+// CreateTemplateSpaceCollectReqValidationError is the validation error
+// returned by CreateTemplateSpaceCollectReq.Validate if the designated
+// constraints aren't met.
+type CreateTemplateSpaceCollectReqValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e CreateTemplateSpaceCollectReqValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e CreateTemplateSpaceCollectReqValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e CreateTemplateSpaceCollectReqValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e CreateTemplateSpaceCollectReqValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e CreateTemplateSpaceCollectReqValidationError) ErrorName() string {
+	return "CreateTemplateSpaceCollectReqValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e CreateTemplateSpaceCollectReqValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sCreateTemplateSpaceCollectReq.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = CreateTemplateSpaceCollectReqValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = CreateTemplateSpaceCollectReqValidationError{}
+
+// Validate checks the field values on DeleteTemplateSpaceCollectReq with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *DeleteTemplateSpaceCollectReq) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DeleteTemplateSpaceCollectReq with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// DeleteTemplateSpaceCollectReqMultiError, or nil if none found.
+func (m *DeleteTemplateSpaceCollectReq) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DeleteTemplateSpaceCollectReq) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if l := utf8.RuneCountInString(m.GetProjectCode()); l < 1 || l > 32 {
+		err := DeleteTemplateSpaceCollectReqValidationError{
+			field:  "ProjectCode",
+			reason: "value length must be between 1 and 32 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if l := utf8.RuneCountInString(m.GetTemplateSpaceID()); l < 1 || l > 64 {
+		err := DeleteTemplateSpaceCollectReqValidationError{
+			field:  "TemplateSpaceID",
+			reason: "value length must be between 1 and 64 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return DeleteTemplateSpaceCollectReqMultiError(errors)
+	}
+
+	return nil
+}
+
+// DeleteTemplateSpaceCollectReqMultiError is an error wrapping multiple
+// validation errors returned by DeleteTemplateSpaceCollectReq.ValidateAll()
+// if the designated constraints aren't met.
+type DeleteTemplateSpaceCollectReqMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DeleteTemplateSpaceCollectReqMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DeleteTemplateSpaceCollectReqMultiError) AllErrors() []error { return m }
+
+// DeleteTemplateSpaceCollectReqValidationError is the validation error
+// returned by DeleteTemplateSpaceCollectReq.Validate if the designated
+// constraints aren't met.
+type DeleteTemplateSpaceCollectReqValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e DeleteTemplateSpaceCollectReqValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e DeleteTemplateSpaceCollectReqValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e DeleteTemplateSpaceCollectReqValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e DeleteTemplateSpaceCollectReqValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e DeleteTemplateSpaceCollectReqValidationError) ErrorName() string {
+	return "DeleteTemplateSpaceCollectReqValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e DeleteTemplateSpaceCollectReqValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sDeleteTemplateSpaceCollectReq.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = DeleteTemplateSpaceCollectReqValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = DeleteTemplateSpaceCollectReqValidationError{}
+
 // Validate checks the field values on GetTemplateMetadataReq with the rules
 // defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -9998,11 +10884,17 @@ func (m *CreateTemplateMetadataReq) validate(all bool) error {
 
 	// no validation rules for Content
 
+	// no validation rules for EditFormat
+
 	// no validation rules for IsDraft
 
 	// no validation rules for DraftVersion
 
 	// no validation rules for DraftContent
+
+	// no validation rules for DraftEditFormat
+
+	// no validation rules for RenderMode
 
 	if len(errors) > 0 {
 		return CreateTemplateMetadataReqMultiError(errors)
@@ -10151,6 +11043,8 @@ func (m *UpdateTemplateMetadataReq) validate(all bool) error {
 	// no validation rules for DraftVersion
 
 	// no validation rules for DraftContent
+
+	// no validation rules for DraftEditFormat
 
 	if len(errors) > 0 {
 		return UpdateTemplateMetadataReqMultiError(errors)
@@ -10814,6 +11708,8 @@ func (m *CreateTemplateVersionReq) validate(all bool) error {
 	}
 
 	// no validation rules for Force
+
+	// no validation rules for RenderMode
 
 	if len(errors) > 0 {
 		return CreateTemplateVersionReqMultiError(errors)
@@ -11532,6 +12428,8 @@ func (m *DeployTemplateFileReq) validate(all bool) error {
 		}
 		errors = append(errors, err)
 	}
+
+	// no validation rules for Values
 
 	if len(errors) > 0 {
 		return DeployTemplateFileReqMultiError(errors)
@@ -12611,6 +13509,35 @@ func (m *FetchMultiClusterResourceReq) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if all {
+		switch v := interface{}(m.GetCreateSource()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, FetchMultiClusterResourceReqValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, FetchMultiClusterResourceReqValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCreateSource()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return FetchMultiClusterResourceReqValidationError{
+				field:  "CreateSource",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return FetchMultiClusterResourceReqMultiError(errors)
 	}
@@ -12704,6 +13631,205 @@ var _FetchMultiClusterResourceReq_Order_InLookup = map[string]struct{}{
 	"asc":  {},
 	"desc": {},
 }
+
+// Validate checks the field values on FetchMultiClusterApiResourcesReq with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the first error encountered is returned, or nil if there are
+// no violations.
+func (m *FetchMultiClusterApiResourcesReq) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on FetchMultiClusterApiResourcesReq with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// FetchMultiClusterApiResourcesReqMultiError, or nil if none found.
+func (m *FetchMultiClusterApiResourcesReq) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *FetchMultiClusterApiResourcesReq) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if l := utf8.RuneCountInString(m.GetProjectCode()); l < 1 || l > 64 {
+		err := FetchMultiClusterApiResourcesReqValidationError{
+			field:  "ProjectCode",
+			reason: "value length must be between 1 and 64 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(m.GetClusterNamespaces()) < 1 {
+		err := FetchMultiClusterApiResourcesReqValidationError{
+			field:  "ClusterNamespaces",
+			reason: "value must contain at least 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	for idx, item := range m.GetClusterNamespaces() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, FetchMultiClusterApiResourcesReqValidationError{
+						field:  fmt.Sprintf("ClusterNamespaces[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, FetchMultiClusterApiResourcesReqValidationError{
+						field:  fmt.Sprintf("ClusterNamespaces[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return FetchMultiClusterApiResourcesReqValidationError{
+					field:  fmt.Sprintf("ClusterNamespaces[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	// no validation rules for OnlyCrd
+
+	// no validation rules for ViewID
+
+	for idx, item := range m.GetLabelSelector() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, FetchMultiClusterApiResourcesReqValidationError{
+						field:  fmt.Sprintf("LabelSelector[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, FetchMultiClusterApiResourcesReqValidationError{
+						field:  fmt.Sprintf("LabelSelector[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return FetchMultiClusterApiResourcesReqValidationError{
+					field:  fmt.Sprintf("LabelSelector[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return FetchMultiClusterApiResourcesReqMultiError(errors)
+	}
+
+	return nil
+}
+
+// FetchMultiClusterApiResourcesReqMultiError is an error wrapping multiple
+// validation errors returned by
+// FetchMultiClusterApiResourcesReq.ValidateAll() if the designated
+// constraints aren't met.
+type FetchMultiClusterApiResourcesReqMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m FetchMultiClusterApiResourcesReqMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m FetchMultiClusterApiResourcesReqMultiError) AllErrors() []error { return m }
+
+// FetchMultiClusterApiResourcesReqValidationError is the validation error
+// returned by FetchMultiClusterApiResourcesReq.Validate if the designated
+// constraints aren't met.
+type FetchMultiClusterApiResourcesReqValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e FetchMultiClusterApiResourcesReqValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e FetchMultiClusterApiResourcesReqValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e FetchMultiClusterApiResourcesReqValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e FetchMultiClusterApiResourcesReqValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e FetchMultiClusterApiResourcesReqValidationError) ErrorName() string {
+	return "FetchMultiClusterApiResourcesReqValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e FetchMultiClusterApiResourcesReqValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sFetchMultiClusterApiResourcesReq.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = FetchMultiClusterApiResourcesReqValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = FetchMultiClusterApiResourcesReqValidationError{}
 
 // Validate checks the field values on FetchMultiClusterCustomResourceReq with
 // the rules defined in the proto definition for this message. If any rules
@@ -12877,6 +14003,35 @@ func (m *FetchMultiClusterCustomResourceReq) validate(all bool) error {
 			return err
 		}
 		errors = append(errors, err)
+	}
+
+	if all {
+		switch v := interface{}(m.GetCreateSource()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, FetchMultiClusterCustomResourceReqValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, FetchMultiClusterCustomResourceReqValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCreateSource()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return FetchMultiClusterCustomResourceReqValidationError{
+				field:  "CreateSource",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
 	}
 
 	if len(errors) > 0 {
@@ -13089,6 +14244,35 @@ func (m *MultiClusterResourceCountReq) validate(all bool) error {
 	}
 
 	// no validation rules for Name
+
+	if all {
+		switch v := interface{}(m.GetCreateSource()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, MultiClusterResourceCountReqValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, MultiClusterResourceCountReqValidationError{
+					field:  "CreateSource",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCreateSource()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return MultiClusterResourceCountReqValidationError{
+				field:  "CreateSource",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
 
 	if len(errors) > 0 {
 		return MultiClusterResourceCountReqMultiError(errors)

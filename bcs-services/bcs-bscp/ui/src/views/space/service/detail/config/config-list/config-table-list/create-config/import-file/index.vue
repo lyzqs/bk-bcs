@@ -31,7 +31,12 @@
           @file-processing="fileProcessing = $event" />
       </div>
       <div v-else-if="importType === 'configTemplate'">
-        <ImportFromTemplate ref="importFromTemplateRef" :bk-biz-id="props.bkBizId" :app-id="props.appId" />
+        <ImportFromTemplate
+          ref="importFromTemplateRef"
+          :bk-biz-id="props.bkBizId"
+          :app-id="props.appId"
+          @toggle-disabled="templateImportBtnDisabled = $event"
+          @close="handleClose" />
       </div>
       <div v-else-if="importType === 'historyVersion'">
         <div class="wrap">
@@ -57,6 +62,7 @@
       </div>
     </div>
     <bk-loading
+      v-if="importType !== 'configTemplate'"
       :loading="decompressing || fileProcessing || tableLoading"
       :title="loadingText"
       class="config-table-loading"
@@ -64,9 +70,14 @@
       theme="primary"
       size="small"
       :opacity="0.7">
-      <div
-        v-if="importType !== 'configTemplate' && allConfigList.length + allTemplateConfigList.length > 0"
-        class="content">
+      <div v-if="allConfigList.length + allTemplateConfigList.length > 0" class="content">
+        <bk-alert
+          v-if="isExceedMaxFileCount"
+          style="margin-top: 4px"
+          theme="error"
+          :title="
+            $t('配置文件数量超过最大上传限制 ({n} 个文件)', { n: spaceFeatureFlags.RESOURCE_LIMIT.AppConfigCnt })
+          " />
         <div class="head">
           <bk-checkbox style="margin-left: 24px" v-model="isClearDraft"> {{ $t('导入前清空草稿区') }} </bk-checkbox>
           <div v-if="!isClearDraft" class="tips">
@@ -146,7 +157,7 @@
       <bk-button
         theme="primary"
         style="margin-right: 8px"
-        :disabled="!confirmBtnDisabled || loading"
+        :disabled="confirmBtnDisabled || loading"
         :loading="loading"
         @click="handleConfirm">
         {{ t('导入') }}
@@ -172,13 +183,17 @@
   import ConfigTable from '../../../../../../../templates/list/package-detail/operations/add-configs/import-configs/config-table.vue';
   import useModalCloseConfirmation from '../../../../../../../../../utils/hooks/use-modal-close-confirmation';
   import useServiceStore from '../../../../../../../../../store/service';
+  import useGlobalStore from '../../../../../../../../../store/global';
   import { ImportTemplateConfigItem } from '../../../../../../../../../../types/template';
   import TemplateConfigTable from './template-config-table.vue';
   import { cloneDeep } from 'lodash';
+  import { storeToRefs } from 'pinia';
 
   const { t, locale } = useI18n();
 
   const serviceStore = useServiceStore();
+
+  const { spaceFeatureFlags } = storeToRefs(useGlobalStore());
 
   const props = defineProps<{
     show: boolean;
@@ -209,19 +224,21 @@
   const selectedConfigIds = ref<(string | number)[]>([]);
   const configSelectRef = ref();
   const lastSelectedConfigIds = ref<(string | number)[]>([]); // 上一次选中导入的配置项
+  const templateImportBtnDisabled = ref(true); // 从配置模板导入按钮是否禁用
 
   const confirmBtnDisabled = computed(() => {
     if (importType.value === 'configTemplate' && importFromTemplateRef.value) {
-      return importFromTemplateRef.value.isImportBtnDisabled;
+      return templateImportBtnDisabled.value;
     }
     if (importType.value === 'localFile') {
       return (
-        !uploadFileLoading.value &&
-        !decompressing.value &&
-        importConfigList.value.length + importTemplateConfigList.value.length > 0
+        uploadFileLoading.value ||
+        decompressing.value ||
+        importConfigList.value.length + importTemplateConfigList.value.length === 0 ||
+        isExceedMaxFileCount.value
       );
     }
-    return importConfigList.value.length + importTemplateConfigList.value.length > 0 && !hasError.value;
+    return importConfigList.value.length + importTemplateConfigList.value.length === 0 || hasError.value;
   });
 
   const importConfigList = computed(() => [...nonExistConfigList.value, ...existConfigList.value]);
@@ -246,6 +263,10 @@
     return '';
   });
 
+  const isExceedMaxFileCount = computed(
+    () => importConfigList.value.length > spaceFeatureFlags.value.RESOURCE_LIMIT.AppConfigCnt,
+  );
+
   watch(
     () => props.show,
     (val) => {
@@ -269,7 +290,7 @@
     },
   );
 
-  // 配置文件绝对路径
+  // 配置文件名
   const fileAP = (config: IConfigImportItem) => {
     const { path, name } = config;
     if (path.endsWith('/')) {
@@ -446,6 +467,7 @@
   const handleDeleteFile = (fileName: string) => {
     existConfigList.value = existConfigList.value.filter((item) => item.file_name !== fileName);
     nonExistConfigList.value = nonExistConfigList.value.filter((item) => item.file_name !== fileName);
+    allConfigList.value = [...existConfigList.value, ...nonExistConfigList.value];
   };
 
   const handleClearTable = () => {

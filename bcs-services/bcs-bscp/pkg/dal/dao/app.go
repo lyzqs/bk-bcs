@@ -15,11 +15,14 @@ package dao
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	rawgen "gorm.io/gen"
 
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/errf"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/dal/gen"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/dal/table"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/i18n"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/kit"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/logs"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/types"
@@ -49,6 +52,8 @@ type App interface {
 	ListAppMetaForCache(kt *kit.Kit, bizID uint32, appID []uint32) (map[ /*appID*/ uint32]*types.AppCacheMeta, error)
 	// GetByAlias 通过Alisa 查询
 	GetByAlias(kit *kit.Kit, bizID uint32, alias string) (*table.App, error)
+	// BatchUpdateLastConsumedTime 批量更新最后一次拉取时间
+	BatchUpdateLastConsumedTime(kit *kit.Kit, bizID uint32, appIDs []uint32) error
 }
 
 var _ App = new(appDao)
@@ -58,6 +63,21 @@ type appDao struct {
 	idGen    IDGenInterface
 	auditDao AuditDao
 	event    Event
+}
+
+// BatchUpdateLastConsumedTime 批量更新最后一次拉取时间
+func (dao *appDao) BatchUpdateLastConsumedTime(kit *kit.Kit, bizID uint32, appIDs []uint32) error {
+
+	m := dao.genQ.App
+
+	_, err := dao.genQ.App.WithContext(kit.Ctx).
+		Where(m.BizID.Eq(bizID), m.ID.In(appIDs...)).
+		Update(m.LastConsumedTime, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // List app's detail info with the filter's expression.
@@ -146,10 +166,10 @@ func (dao *appDao) ListAppsByIDs(kit *kit.Kit, ids []uint32) ([]*table.App, erro
 // Create one app instance
 func (dao *appDao) Create(kit *kit.Kit, g *table.App) (uint32, error) {
 	if g == nil {
-		return 0, errors.New("app is nil")
+		return 0, errf.Errorf(errf.InvalidArgument, i18n.T(kit, "app is nil"))
 	}
 
-	if err := g.ValidateCreate(); err != nil {
+	if err := g.ValidateCreate(kit); err != nil {
 		return 0, err
 	}
 
@@ -167,11 +187,12 @@ func (dao *appDao) Create(kit *kit.Kit, g *table.App) (uint32, error) {
 	createTx := func(tx *gen.Query) error {
 		q := tx.App.WithContext(kit.Ctx)
 		if err = q.Create(g); err != nil {
-			return err
+			return errf.Errorf(errf.DBOpFailed, i18n.T(kit, "create data failed, err: %v", err))
 		}
 
 		if err = ad.Do(tx); err != nil {
-			return err
+			logs.Errorf("execution of transactions failed, err: %v", err)
+			return errf.Errorf(errf.DBOpFailed, i18n.T(kit, "create app failed, err: %v", err))
 		}
 
 		// fire the event with txn to ensure the if save the event failed then the business logic is failed anyway.
@@ -186,7 +207,7 @@ func (dao *appDao) Create(kit *kit.Kit, g *table.App) (uint32, error) {
 		}
 		if err = eDecorator.Fire(one); err != nil {
 			logs.Errorf("fire create app: %s event failed, err: %v, rid: %s", g.ID, err, kit.Rid)
-			return errors.New("fire event failed, " + err.Error()) // nolint goconst
+			return errf.Errorf(errf.DBOpFailed, i18n.T(kit, "create app failed, err: %v", err))
 		}
 
 		return nil
@@ -196,7 +217,8 @@ func (dao *appDao) Create(kit *kit.Kit, g *table.App) (uint32, error) {
 	eDecorator.Finalizer(err)
 
 	if err != nil {
-		return 0, err
+		logs.Errorf("transaction processing failed %s", err)
+		return 0, errf.Errorf(errf.DBOpFailed, i18n.T(kit, "create app failed, err: %v", err))
 	}
 
 	return id, nil
@@ -205,15 +227,15 @@ func (dao *appDao) Create(kit *kit.Kit, g *table.App) (uint32, error) {
 // Update an app instance.
 func (dao *appDao) Update(kit *kit.Kit, g *table.App) error {
 	if g == nil {
-		return errors.New("app is nil")
+		return errf.Errorf(errf.InvalidArgument, i18n.T(kit, "app is nil"))
 	}
 
 	oldOne, err := dao.Get(kit, g.BizID, g.ID)
 	if err != nil {
-		return fmt.Errorf("get update app failed, err: %v", err)
+		return errf.Errorf(errf.DBOpFailed, i18n.T(kit, "update app failed, err: %s", err))
 	}
 
-	if err = g.ValidateUpdate(oldOne.Spec.ConfigType); err != nil {
+	if err = g.ValidateUpdate(kit, oldOne.Spec.ConfigType); err != nil {
 		return err
 	}
 
@@ -247,7 +269,7 @@ func (dao *appDao) Update(kit *kit.Kit, g *table.App) error {
 		}
 		if err = eDecorator.Fire(one); err != nil {
 			logs.Errorf("fire update app: %s event failed, err: %v, rid: %s", g.ID, err, kit.Rid)
-			return errors.New("fire event failed, " + err.Error())
+			return errf.Errorf(errf.DBOpFailed, i18n.T(kit, "update app failed, err: %s", err))
 		}
 		return nil
 	}
@@ -343,7 +365,7 @@ func (dao *appDao) GetByName(kit *kit.Kit, bizID uint32, name string) (*table.Ap
 
 	app, err := q.Where(m.BizID.Eq(bizID), m.Name.Eq(name)).Take()
 	if err != nil {
-		return nil, fmt.Errorf("get app failed, err: %v", err)
+		return nil, errf.Errorf(errf.DBOpFailed, i18n.T(kit, "get app failed, err: %v", err))
 	}
 
 	return app, nil

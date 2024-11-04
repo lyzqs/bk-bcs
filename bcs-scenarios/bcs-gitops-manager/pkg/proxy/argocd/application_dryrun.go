@@ -153,8 +153,8 @@ func (plugin *AppPlugin) handleApplicationDryRun(ctx context.Context, req *Appli
 }
 
 // nolint
-func (plugin *AppPlugin) checkApplicationDryRunRequest(ctx context.Context,
-	req *ApplicationDryRunRequest) (*v1alpha1.Application, error) {
+func (plugin *AppPlugin) checkApplicationDryRunRequest(ctx context.Context, req *ApplicationDryRunRequest) (
+	*v1alpha1.Application, error) {
 	argoApplication := new(v1alpha1.Application)
 	if req.ApplicationName != "" {
 		var err error
@@ -214,7 +214,7 @@ func (plugin *AppPlugin) applicationManifests(ctx context.Context, application *
 		return nil, errors.Errorf("application manifests response length is 0")
 	}
 	manifestResponse := resp[0]
-	manifestMap, err := decodeManifest(application, manifestResponse)
+	manifestMap, err := plugin.decodeManifest(ctx, application, manifestResponse)
 	if err != nil {
 		return nil, errors.Wrapf(err, "decode application manifest failed")
 	}
@@ -222,8 +222,13 @@ func (plugin *AppPlugin) applicationManifests(ctx context.Context, application *
 	return manifestMap, nil
 }
 
-func decodeManifest(application *v1alpha1.Application,
+func (plugin *AppPlugin) decodeManifest(ctx context.Context, application *v1alpha1.Application,
 	resp *apiclient.ManifestResponse) (map[string]*unstructured.Unstructured, error) {
+	newManifests, err := plugin.secretStore.DecryptManifest(ctx, application.Spec.Project, resp.Manifests)
+	if err != nil {
+		return nil, errors.Wrapf(err, "decrypt application manifest failed")
+	}
+	resp.Manifests = newManifests
 	result := make(map[string]*unstructured.Unstructured)
 	decode := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer().Decode
 	for i := range resp.Manifests {
@@ -289,7 +294,10 @@ func getGroupVersionKindResource(config *rest.Config) (map[string]metav1.APIReso
 	}
 	_, resources, err := discoveryClient.ServerGroupsAndResources()
 	if err != nil {
-		return nil, errors.Wrapf(err, "get server groups and resources failed")
+		blog.Warnf("get server groups and resources failed:%s", err.Error())
+	}
+	if len(resources) == 0 {
+		return nil, fmt.Errorf("get server groups and resources failed, resources empty")
 	}
 	result := make(map[string]metav1.APIResource)
 	for _, resourceList := range resources {

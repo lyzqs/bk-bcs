@@ -98,6 +98,10 @@ export interface IPackagesCitedByApps {
   template_set_name: string;
   app_id: number;
   app_name: string;
+  app_exceeds_limit?: boolean;
+  template_set_exceeds_limit?: boolean;
+  app_exceeds_quantity?: number;
+  template_set_exceeds_quantity?: number;
 }
 
 // 模板被服务绑定或套餐引用计数详情
@@ -181,6 +185,7 @@ export interface IPkgTreeItem {
   disabled?: boolean;
   indeterminate?: boolean;
   parentName?: string;
+  template_space_id?: number;
 }
 
 // 模板下多个版本名称

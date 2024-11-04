@@ -9,13 +9,14 @@
     <div class="slider-content-container">
       <ConfigForm
         ref="formRef"
-        v-model:fileUploading="fileUploading"
+        v-model:file-uploading="fileUploading"
         :config="configForm"
         :content="content"
         :editable="true"
         :is-tpl="true"
         :bk-biz-id="spaceId"
         :id="currentTemplateSpace"
+        :file-size-limit="spaceFeatureFlags.RESOURCE_LIMIT.maxFileSize"
         @change="handleFormChange" />
     </div>
     <div class="action-btns">
@@ -36,7 +37,7 @@
   import Message from 'bkui-vue/lib/message';
   import useGlobalStore from '../../../../../../../../store/global';
   import useTemplateStore from '../../../../../../../../store/template';
-  import { updateTemplateContent, createTemplate, addTemplateToPackage } from '../../../../../../../../api/template';
+  import { updateTemplateContent, createTemplate } from '../../../../../../../../api/template';
   import { IConfigEditParams, IFileConfigContentSummary } from '../../../../../../../../../types/config';
   import { getConfigEditParams } from '../../../../../../../../utils/config';
   import useModalCloseConfirmation from '../../../../../../../../utils/hooks/use-modal-close-confirmation';
@@ -45,7 +46,7 @@
 
   const templateStore = useTemplateStore();
 
-  const { spaceId } = storeToRefs(useGlobalStore());
+  const { spaceId, spaceFeatureFlags } = storeToRefs(useGlobalStore());
   const { currentTemplateSpace } = storeToRefs(useTemplateStore());
   const { t } = useI18n();
 
@@ -107,10 +108,6 @@
         template_set_ids: pkgIds[0] === 0 ? [] : pkgIds,
       };
       const res = await createTemplate(spaceId.value, currentTemplateSpace.value, params);
-      // 选择未指定套餐时,不需要调用添加接口
-      if (pkgIds.length > 1 || pkgIds[0] !== 0) {
-        await addTemplateToPackage(spaceId.value, currentTemplateSpace.value, [res.data.id], pkgIds);
-      }
       templateStore.$patch((state) => {
         state.topIds = [res.data.id];
       });

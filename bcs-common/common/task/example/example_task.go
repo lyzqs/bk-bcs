@@ -16,7 +16,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/Tencent/bk-bcs/bcs-common/common/task"
+	istep "github.com/Tencent/bk-bcs/bcs-common/common/task/steps/iface"
 	"github.com/Tencent/bk-bcs/bcs-common/common/task/types"
 )
 
@@ -26,9 +26,9 @@ import (
 
 var (
 	// ExampleTask task
-	ExampleTask task.TaskName = "测试任务"
+	ExampleTask types.TaskName = "测试任务"
 	// TestTask task for test
-	TestTask task.TaskType = "TestTask"
+	TestTask types.TaskType = "TestTask"
 )
 
 // NewExampleTask build example task
@@ -60,7 +60,7 @@ func (st *Example) Steps() []*types.Step {
 	steps := make([]*types.Step, 0)
 
 	// step1: sum step
-	step1 := SumStep{}.BuildStep([]task.KeyValue{
+	step1 := SumStep{}.BuildStep([]istep.KeyValue{
 		{
 			Key:   sumA,
 			Value: st.a,
@@ -79,17 +79,14 @@ func (st *Example) Steps() []*types.Step {
 }
 
 // BuildTask build task
-func (st *Example) BuildTask(info *types.TaskInfo, opts ...types.TaskOption) (*types.Task, error) {
+func (st *Example) BuildTask(info types.TaskInfo, opts ...types.TaskOption) (*types.Task, error) {
 	t := types.NewTask(info, opts...)
 	if len(st.Steps()) == 0 {
 		return nil, fmt.Errorf("task steps empty")
 	}
 
-	for _, step := range st.Steps() {
-		t.Steps[step.GetName()] = step
-		t.StepSequence = append(t.StepSequence, step.GetName())
-	}
-	t.CurrentStep = t.StepSequence[0]
+	t.Steps = st.Steps()
+	t.CurrentStep = t.Steps[0].GetName()
 
 	return t, nil
 }

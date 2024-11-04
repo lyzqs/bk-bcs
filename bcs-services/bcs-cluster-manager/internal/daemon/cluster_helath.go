@@ -76,16 +76,18 @@ func (d *Daemon) reportClusterHealthStatus(error chan<- error) {
 			k8sOperator := clusterops.NewK8SOperator(options.GetGlobalCMOptions(), d.model)
 			kubeCli, errLocal := k8sOperator.GetClusterClient(cls.ClusterID)
 			if errLocal != nil {
+				blog.Errorf("reportClusterHealthStatus GetClusterClient failed: %v", errLocal)
 				error <- errLocal
 				return
 			}
-			_, err = kubeCli.Discovery().ServerVersion()
-			if err != nil {
+			_, errLocal = kubeCli.Discovery().ServerVersion()
+			if errLocal != nil {
+				blog.Errorf("reportClusterHealthStatus GetClusterClient failed: %v", errLocal)
 				// if options.GetEditionInfo().IsCommunicationEdition() {}
 				_ = d.updateClusterStatus(cls.ClusterID, common.StatusConnectClusterFailed)
 
 				metrics.ReportCloudClusterHealthStatus(cls.Provider, cls.ClusterID, 0)
-				error <- err
+				error <- errLocal
 				return
 			}
 

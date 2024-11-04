@@ -202,6 +202,7 @@ type AutoScaler struct {
 	ReleaseName      string `json:"releaseName"`
 	ReleaseNamespace string `json:"releaseNamespace"`
 	IsPublicRepo     bool   `json:"isPublicRepo"`
+	CaImageRegistry  string `json:"caImageRegistry"`
 }
 
 // BcsWatch config
@@ -276,7 +277,9 @@ type JobConfig struct {
 
 // DaemonConfig for daemon
 type DaemonConfig struct {
-	Enable bool `json:"enable"`
+	Enable             bool `json:"enable"`
+	EnableInsTypeUsage bool `json:"enableInsTypeUsage"`
+	EnableAllocateCidr bool `json:"enableAllocateCidr"`
 }
 
 // ClusterManagerOptions options of cluster manager

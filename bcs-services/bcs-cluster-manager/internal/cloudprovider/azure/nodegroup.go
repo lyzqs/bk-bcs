@@ -134,12 +134,82 @@ func (ng *NodeGroup) UpdateNodeGroup(group *proto.NodeGroup, opt *cloudprovider.
 	}
 
 	// note:Azure不支持更换镜像
-	//// update imageName
+	// update imageName
 	// if err = ng.updateImageInfo(group); err != nil {
 	//	return err
-	//}
+	// }
 
 	return nil, nil
+}
+
+// RecommendNodeGroupConf recommends nodegroup configs
+func (ng *NodeGroup) RecommendNodeGroupConf(opt *cloudprovider.CommonOption) ([]*proto.RecommendNodeGroupConf, error) {
+	if opt == nil {
+		return nil, fmt.Errorf("invalid request")
+	}
+
+	mgr := NodeManager{}
+	insTypes, err := mgr.ListNodeInstanceType(cloudprovider.InstanceInfo{
+		Region: opt.Region,
+		Cpu:    8,
+		Memory: 16,
+	}, opt)
+	if err != nil {
+		return nil, fmt.Errorf("list node instance type failed, %s", err.Error())
+	}
+
+	validInsTypes := make([]*proto.InstanceType, 0)
+	for _, in := range insTypes {
+		if in.Status == common.InstanceSell {
+			validInsTypes = append(validInsTypes, in)
+		}
+	}
+	if len(validInsTypes) == 0 {
+		return nil, fmt.Errorf("RecommendNodeGroupConf no valid instanceType for 8c16g")
+	}
+
+	configs := make([]*proto.RecommendNodeGroupConf, 0)
+	configs = append(configs,
+		generateNodeGroupConf("agentpool", "System", validInsTypes[0]),
+		// generateNodeGroupConf("userpool", "User", validInsTypes[0]),
+	)
+
+	return configs, nil
+}
+
+func generateNodeGroupConf(name, mode string, t *proto.InstanceType) *proto.RecommendNodeGroupConf {
+	return &proto.RecommendNodeGroupConf{
+		Name:  name,
+		Mode:  mode,
+		Zones: t.Zones,
+		InstanceProfile: &proto.InstanceProfile{
+			NodeOS:             "Ubuntu",
+			InstanceType:       t.NodeType,
+			InstanceChargeType: "TRAFFIC_POSTPAID_BY_HOUR",
+		},
+		HardwareProfile: &proto.HardwareProfile{
+			CPU: 8,
+			Mem: 16,
+			SystemDisk: &proto.DataDisk{
+				DiskType: "CLOUD_PREMIUM",
+				DiskSize: "100",
+			},
+			DataDisks: []*proto.DataDisk{
+				{
+					DiskType: "Premium_LRS",
+					DiskSize: "100",
+				},
+			},
+		},
+		NetworkProfile: &proto.NetworkProfile{
+			PublicIPAssigned: false,
+		},
+		ScalingProfile: &proto.ScalingProfile{
+			MaxSize: 5,
+			// 释放模式
+			ScalingMode: "Delete",
+		},
+	}
 }
 
 // GetNodesInGroup 从云上拉取该节点池的所有节点 - get all nodes belong to NodeGroup
@@ -444,7 +514,8 @@ func (ng *NodeGroup) updateAgentPoolProperties(client api.AksService, cluster *p
 	// update agent pool
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	if _, err = client.UpdatePoolAndReturn(ctx, pool, "", cluster.SystemID, *pool.Name); err != nil {
+	if _, err = client.UpdatePoolAndReturn(ctx, pool, cloudprovider.GetClusterResourceGroup(cluster),
+		cluster.SystemID, *pool.Name); err != nil {
 		return errors.Wrapf(err, "UpdateNodeGroup: call UpdateAgentPool api failed")
 	}
 

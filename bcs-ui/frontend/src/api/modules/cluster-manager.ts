@@ -66,6 +66,8 @@ export const cloudInstanceTypes = request('get', '/clouds/$cloudId/instancetypes
 export const cloudInstanceTypesByLevel = request('get', '/clouds/$cloudId/regions/$region/clusterlevels/$level/instancetypes');
 export const cloudCidrconflict = request('get', '/clouds/$cloudId/vpcs/$vpc/cidrconflict');
 export const addSubnets = request('post', '/clusters/$clusterId/subnets');
+export const cloudRoles = request('get', '/clouds/$cloudId/serviceroles');
+export const recommendNodeGroupConf = request('get', '/cloud/$cloudId/recommendNodeGroupConf');
 
 // node 操作
 export const getK8sNodes = request('get', '/cluster/$clusterId/node');
@@ -110,3 +112,6 @@ export const ccTopology = request('get', '/cluster/$clusterId/cc/topology');
 export const underlayNetwork = request('post', '/clusters/$clusterId/networks/underlay');
 
 export const clusterMeta = request('post', '/clusters/-/meta');
+export const clusterOperationLogs = request('get', '/operationlogs');
+export const clusterTaskRecords = request('get', '/taskrecords');
+export const taskLogsDownloadURL = `${process.env.NODE_ENV === 'development' ? '' : window.BCS_API_HOST}/bcsapi/v4/clustermanager/v1/common/downloadtaskrecords`;

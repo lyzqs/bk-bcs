@@ -25,13 +25,17 @@
   <bk-button
     v-else
     class="batch-delete-btn"
-    :disabled="props.selectedIds.length === 0"
+    :disabled="props.selectedIds.length === 0 && !isAcrossChecked"
     @click="isBatchDeleteDialogShow = true">
     {{ t('批量删除') }}
   </bk-button>
   <DeleteConfirmDialog
-    v-model:isShow="isBatchDeleteDialogShow"
-    :title="t('确认删除所选的 {n} 项配置项？', { n: props.selectedIds.length })"
+    v-model:is-show="isBatchDeleteDialogShow"
+    :title="
+      t('确认删除所选的 {n} 项配置项？', {
+        n: isAcrossChecked ? dataCount - props.selectedIds.length : props.selectedIds.length,
+      })
+    "
     :pending="batchDeletePending"
     @confirm="handleBatchDeleteConfirm">
     <div>
@@ -55,6 +59,7 @@
   import DeleteConfirmDialog from '../../../../../../../components/delete-confirm-dialog.vue';
   import EditPermissionDialog from '../../../../../templates/list/package-detail/operations/edit-permission/edit-permission-dialog.vue';
   import { IConfigItem } from '../../../../../../../../types/config';
+
   const { t } = useI18n();
 
   interface IPermissionType {
@@ -69,6 +74,8 @@
     selectedIds: number[];
     isFileType: boolean; // 是否为文件型配置
     selectedItems: IConfigItem[];
+    isAcrossChecked: boolean;
+    dataCount: number;
   }>();
 
   const emits = defineEmits(['deleted']);
@@ -85,7 +92,7 @@
     if (props.isFileType) {
       await batchDeleteServiceConfigs(props.bkBizId, props.appId, props.selectedIds);
     } else {
-      await batchDeleteKv(props.bkBizId, props.appId, props.selectedIds);
+      await batchDeleteKv(props.bkBizId, props.appId, props.selectedIds, props.isAcrossChecked);
     }
     Message({
       theme: 'success',
@@ -143,7 +150,6 @@
   .batch-set-btn {
     min-width: 108px;
     height: 32px;
-    margin-left: 8px;
     &.popover-open {
       .angle-icon {
         transform: rotate(-180deg);

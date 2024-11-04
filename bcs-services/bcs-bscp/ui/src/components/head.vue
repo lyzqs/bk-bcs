@@ -16,17 +16,15 @@
                 v-for="secondNav in nav.children"
                 :key="secondNav.id"
                 :class="['secondNav-item', { actived: isSecondNavActived(secondNav.module) }]">
-                <router-link
-                  :to="{ name: secondNav.id, params: { spaceId: spaceId || 0 } }"
-                  @click="handleNavClick(secondNav.id)">
+                <a @click.stop="handleNavClick(secondNav.id)">
                   {{ secondNav.name }}
-                </router-link>
+                </a>
               </div>
             </div>
           </div>
-          <router-link v-else :to="{ name: nav.id, params: { spaceId: spaceId || 0 } }" @click="handleNavClick(nav.id)">
+          <a v-else @click.stop="handleNavClick(nav.id)">
             {{ nav.name }}
-          </router-link>
+          </a>
         </div>
       </div>
     </div>
@@ -68,7 +66,7 @@
               <span class="text">{{ item.space_name }}</span>
               <span class="id">({{ item.space_id }})</span>
             </div>
-            <span class="tag">{{ item.space_type_name }}</span>
+            <span class="tag">{{ locale === 'zh-cn' ? item.space_type_name : item.space_en_name }}</span>
           </div>
         </template>
       </bk-select>
@@ -77,17 +75,17 @@
           <span :class="['bk-bscp-icon', locale === 'zh-cn' ? 'icon-lang-cn' : 'icon-lang-en']"></span>
         </div>
         <template #content>
-          <div class="international-item" @click="switchLanguage('en')">
-            <span class="bk-bscp-icon icon-lang-en"></span> English
-          </div>
           <div class="international-item" @click="switchLanguage('zh-cn')">
             <span class="bk-bscp-icon icon-lang-cn"></span> 中文
+          </div>
+          <div class="international-item" @click="switchLanguage('en')">
+            <span class="bk-bscp-icon icon-lang-en"></span> English
           </div>
         </template>
       </bk-popover>
       <bk-dropdown trigger="hover" ext-cls="dropdown" :is-show="isShowDropdown" @hide="isShowDropdown = false">
         <bk-button text :class="['dropdown-trigger', isShowDropdown ? 'active' : '']">
-          <help-fill width="16" height="16" :fill="isShowDropdown ? '#fff' : '#96a2b9'" />
+          <help-document-fill width="16" height="16" :fill="isShowDropdown ? '#fff' : '#96a2b9'" />
         </bk-button>
         <template #content>
           <bk-dropdown-menu ext-cls="dropdown-menu">
@@ -121,7 +119,7 @@
   import { useI18n } from 'vue-i18n';
   import { useRoute, useRouter, RouteRecordName } from 'vue-router';
   import { storeToRefs } from 'pinia';
-  import { AngleDown, HelpFill, DownShape, Plus } from 'bkui-vue/lib/icon';
+  import { AngleDown, HelpDocumentFill, DownShape, Plus } from 'bkui-vue/lib/icon';
   import useGlobalStore from '../store/global';
   import useUserStore from '../store/user';
   import useTemplateStore from '../store/template';
@@ -224,13 +222,14 @@
         const detail = JSON.parse(lastAccessedServiceDetail);
         if (detail.spaceId === spaceId.value) {
           router.push({
-            name: navId === 'service-all' ? 'service-config' : (navId as RouteRecordName),
+            name: navId === 'service-all' && !showPermApplyPage.value ? 'service-config' : (navId as RouteRecordName),
             params: { spaceId: detail.spaceId, appId: detail.appId },
           });
           return;
         }
       }
     }
+    router.push({ name: navId, params: { spaceId: spaceId.value || 0 } });
   };
 
   const handleSpaceSearch = (searchStr: string) => {
@@ -417,6 +416,7 @@
           padding: 0 16px;
           font-size: 14px;
           color: #96a2b9;
+          cursor: pointer;
           a {
             color: #96a2b9;
           }
@@ -457,6 +457,7 @@
               padding: 0 16px;
               font-size: 14px;
               white-space: nowrap;
+              cursor: pointer;
               a {
                 color: #96a2b9;
               }
@@ -610,17 +611,18 @@
     cursor: pointer;
   }
   .international {
-    width: 40px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
+    cursor: pointer;
     &:hover {
-      background-color: #fff;
+      background-color: rgba(150, 162, 185, 0.3);
       span {
-        color: #3a84ff;
+        color: #ffffff;
       }
     }
   }

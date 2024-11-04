@@ -40,14 +40,24 @@
       <bk-loading style="min-height: 300px" :loading="listLoading">
         <bk-table
           class="group-table"
-          :border="['outer']"
-          :data="tableData"
-          :checked="checkedGroups"
-          :is-row-select-enable="isRowSelectEnable"
+          :row-class="getRowCls"
           show-overflow-tooltip
-          @selection-change="handleSelectionChange"
-          @select-all="handleSelectAll">
-          <bk-table-column type="selection" width="60"></bk-table-column>
+          :border="['outer']"
+          :data="tableData">
+          <template #prepend>
+            <render-table-tip />
+          </template>
+          <bk-table-column :width="100" :label="renderSelection">
+            <template #default="{ row }">
+              <across-check-box
+                :checked="selections.some((item) => item.name === row.name && item.id === row.id)"
+                :disabled="row.released_apps_num > 0 || row.IS_CATEORY_ROW !== undefined"
+                :handle-change="
+                  () =>
+                    handleRowCheckChange(!selections.some((item) => item.name === row.name && item.id === row.id), row)
+                " />
+            </template>
+          </bk-table-column>
           <bk-table-column :label="t('分组名称')" :width="210" show-overflow-tooltip>
             <template #default="{ row }">
               <div v-if="isCategorizedView" class="categorized-view-name">
@@ -137,7 +147,7 @@
           @limit-change="handlePageLimitChange" />
       </bk-loading>
     </div>
-    <create-group v-model:show="isCreateGroupShow" @reload="loadGroupList"></create-group>
+    <create-group v-model:show="isCreateGroupShow" @reload="loadGroupList($event)"></create-group>
     <edit-group v-model:show="isEditGroupShow" :group="editingGroup" @reload="loadGroupList"></edit-group>
     <services-to-published
       v-model:show="isPublishedSliderShow"
@@ -145,7 +155,7 @@
       :name="editingGroup.name"></services-to-published>
   </section>
   <DeleteConfirmDialog
-    v-model:isShow="isDeleteGroupDialogShow"
+    v-model:is-show="isDeleteGroupDialogShow"
     :title="t('确认删除该分组？')"
     @confirm="handleDeleteGroupConfirm">
     <div style="margin-bottom: 8px">
@@ -162,8 +172,10 @@
   import Message from 'bkui-vue/lib/message';
   import { debounce } from 'lodash';
   import useGlobalStore from '../../../store/global';
+  import CheckType from '../../../../types/across-checked';
   import { getSpaceGroupList, deleteGroup } from '../../../api/group';
   import useTablePagination from '../../../utils/hooks/use-table-pagination';
+  import useTableAcrossCheck from '../../../utils/hooks/use-table-acrosscheck-fulldata';
   import { IGroupItem, IGroupCategory, IGroupCategoryItem } from '../../../../types/group';
   import CreateGroup from './create-group.vue';
   import EditGroup from './edit-group.vue';
@@ -172,6 +184,7 @@
   import ServicesToPublished from './services-to-published.vue';
   import tableEmpty from '../../../components/table/table-empty.vue';
   import DeleteConfirmDialog from '../../../components/delete-confirm-dialog.vue';
+  import acrossCheckBox from '../../../components/across-checkbox.vue';
 
   const { spaceId } = storeToRefs(useGlobalStore());
   const { t, locale } = useI18n();
@@ -187,7 +200,6 @@
   const changeViewPending = ref(false);
   const isDeleteGroupDialogShow = ref(false);
   const deleteGroupItem = ref<IGroupItem>();
-  const selectedIds = ref<number[]>([]);
   const isCreateGroupShow = ref(false);
   const isEditGroupShow = ref(false);
   const editingGroup = ref<IGroupItem>({
@@ -202,16 +214,31 @@
   });
   const isPublishedSliderShow = ref(false);
   const isSearchEmpty = ref(false);
+  const topId = ref<number | undefined>(0);
 
   const headInfo = computed(() =>
     t(
       '分组由 1 个或多个标签选择器组成，服务配置版本选择分组上线结合客户端配置的标签用于灰度发布、A/B Test等运营场景，详情参考文档：',
     ),
   );
-
-  const checkedGroups = computed(() => {
-    return groupList.value.filter((item) => selectedIds.value.includes(item.id));
+  // 跨页全选
+  const selecTableData = computed(() => groupList.value.filter((item) => item.released_apps_num < 1));
+  const pageSelectableData = computed(() => tableData.value.filter((item) => item.released_apps_num! < 1));
+  const selectedIds = computed(() => {
+    return selections.value.filter((item) => item.released_apps_num === 0).map((item) => item.id);
   });
+  // 是否提供跨页全选功能
+  const crossPageSelect = computed(() => {
+    return (
+      !isCategorizedView.value && pagination.value.limit < groupList.value.length && selecTableData.value.length !== 0
+    );
+  });
+  const { selectType, selections, renderSelection, renderTableTip, handleRowCheckChange, handleClearSelection } =
+    useTableAcrossCheck({
+      tableData: selecTableData, // 全量数据，排除禁用
+      curPageData: pageSelectableData, // 当前页数据，排除禁用
+      crossPageSelect, // 展示跨页下拉框；按标签分类查看无分页，默认为当前页
+    });
 
   watch(
     () => spaceId.value,
@@ -228,10 +255,11 @@
   });
 
   // 加载全量分组数据
-  const loadGroupList = async () => {
+  const loadGroupList = async (id?: number) => {
     try {
       listLoading.value = true;
-      const res = await getSpaceGroupList(spaceId.value);
+      topId.value = id;
+      const res = await getSpaceGroupList(spaceId.value, id);
       groupList.value = res.details;
       searchGroupList.value = res.details;
       categorizedGroupList.value = categorizingData(res.details);
@@ -245,7 +273,7 @@
   };
 
   // 刷新表格数据
-  const refreshTableData = () => {
+  const refreshTableData = (pageChange = false) => {
     if (isCategorizedView.value) {
       categorizedGroupList.value = categorizingData(searchGroupList.value);
       categorizedGroupList.value.forEach((item) => {
@@ -257,6 +285,10 @@
       const start = pagination.value.limit * (pagination.value.current - 1);
       tableData.value = searchGroupList.value.slice(start, start + pagination.value.limit);
       pagination.value.count = searchGroupList.value.length;
+    }
+    // 非跨页全选/半选 需要重置全选状态
+    if (![CheckType.HalfAcrossChecked, CheckType.AcrossChecked].includes(selectType.value) || !pageChange) {
+      handleClearSelection();
     }
   };
 
@@ -280,33 +312,6 @@
       });
     });
     return categoryList;
-  };
-
-  // 表格行是否可以选中
-  const isRowSelectEnable = ({ row, isCheckAll }: { row: IGroupItem; isCheckAll: boolean }) => {
-    return isCheckAll || row.released_apps_num < 1;
-  };
-
-  // 表格行选择事件
-  const handleSelectionChange = ({ checked, row }: { checked: boolean; row: IGroupItem }) => {
-    const index = selectedIds.value.findIndex((id) => id === row.id);
-    if (checked) {
-      if (index === -1) {
-        selectedIds.value.push(row.id);
-      }
-    } else {
-      selectedIds.value.splice(index, 1);
-    }
-  };
-
-  // 全选
-  const handleSelectAll = ({ checked }: { checked: boolean }) => {
-    if (checked) {
-      const list = isCategorizedView.value ? groupList.value : tableData.value;
-      selectedIds.value = (list as IGroupItem[]).filter((item) => item.released_apps_num === 0).map((item) => item.id);
-    } else {
-      selectedIds.value = [];
-    }
   };
 
   // 分类视图下的table数据
@@ -341,7 +346,6 @@
   const handleChangeView = () => {
     changeViewPending.value = true;
     pagination.value.current = 1;
-    selectedIds.value = [];
     refreshTableData();
     nextTick(() => {
       changeViewPending.value = false;
@@ -420,7 +424,7 @@
 
   const handlePageChange = (val: number) => {
     pagination.value.current = val;
-    refreshTableData();
+    refreshTableData(true);
   };
 
   const handlePageLimitChange = (val: number) => {
@@ -449,19 +453,23 @@
   const refreshAfterBatchDelete = () => {
     if (
       !isCategorizedView.value &&
-      selectedIds.value.length === tableData.value.length &&
+      selections.value.length === tableData.value.length &&
       pagination.value.current > 1
     ) {
       pagination.value.current = pagination.value.current - 1;
     }
-
-    selectedIds.value = [];
     loadGroupList();
   };
 
   // @ts-ignore
   // eslint-disable-next-line
   const goGroupDoc = () => window.open(BSCP_CONFIG.group_doc);
+
+  const getRowCls = (group: IGroupItem) => {
+    if (topId.value === group.id) {
+      return 'new-row-marked';
+    }
+  };
 </script>
 <style lang="scss" scoped>
   .hyperlink {
@@ -511,6 +519,9 @@
     :deep(.bk-table-body) {
       max-height: calc(100vh - 280px);
       overflow: auto;
+      tr.new-row-marked td {
+        background: #f2fff4 !important;
+      }
     }
   }
   .categorized-view-name {

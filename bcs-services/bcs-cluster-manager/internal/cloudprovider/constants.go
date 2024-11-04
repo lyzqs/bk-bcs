@@ -276,8 +276,13 @@ var (
 	SuccessNodeIDsKey ParamKey = "successNodeIDs"
 	// FailedNodeIDsKey xxx
 	FailedNodeIDsKey ParamKey = "failedNodeIDs"
+	// FailureNodeIDsKey xxx
+	FailureNodeIDsKey ParamKey = "failureNodeIDs"
 	// TimeoutNodeIDsKey xxx
 	TimeoutNodeIDsKey ParamKey = "timeoutNodeIDs"
+
+	// FailureReason xxx
+	FailureReason ParamKey = "failureReason"
 
 	// SuccessAddClusterNodeIDsKey xxx
 	// cloud cluster success & failed Instance
@@ -303,6 +308,8 @@ var (
 	MasterIDs ParamKey = "masterIDs"
 	// CloudSystemID xxx
 	CloudSystemID ParamKey = "systemID"
+	// CloudJobID xxx
+	CloudJobID ParamKey = "jobID"
 
 	// BkSopsUrlKey bk-sops depend Key
 	// BkSopsUrlKey url

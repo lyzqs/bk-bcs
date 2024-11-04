@@ -75,7 +75,7 @@ bcs-component:kube-sche apiserver-proxy \
 bcs-network:ingress-controller
 
 bcs-services:bkcmdb-synchronizer gateway \
-	storage user-manager cluster-manager cluster-reporter tools k8s-watch kube-agent data-manager \
+	storage user-manager cluster-manager cluster-reporter nodeagent tools k8s-watch kube-agent data-manager \
 	helm-manager project-manager nodegroup-manager powertrading
 
 bcs-scenarios: kourse gitops
@@ -113,6 +113,8 @@ pre:
 	go mod tidy
 	go fmt ./...
 	cd ./scripts && chmod +x vet.sh && ./vet.sh
+
+tongsuo:
 	cd ./scripts && chmod +x tongsuo.sh && ./tongsuo.sh
 
 gateway:pre
@@ -162,16 +164,16 @@ webhook-server:pre
 	cp -R ${BCS_CONF_COMPONENT_PATH}/bcs-webhook-server ${PACKAGEPATH}/bcs-runtime/bcs-k8s/bcs-component
 	cd ${BCS_COMPONENT_PATH}/bcs-webhook-server && go mod tidy && go build ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-runtime/bcs-k8s/bcs-component/bcs-webhook-server/bcs-webhook-server ./cmd/server.go
 
-tools:pre
+tools:pre tongsuo
 	mkdir -p ${PACKAGEPATH}/bcs-services
 	cd ${BCS_INSTALL_PATH}/cryptool && go mod tidy && $(CGO_BUILD_FLAGS) go build ${LDFLAG} -o  ${WORKSPACE}/${PACKAGEPATH}/bcs-services/cryptools main.go
 
 ui:pre
 	mkdir -p ${PACKAGEPATH}/bcs-ui
 	cp -R ${BCS_CONF_UI_PATH} ${PACKAGEPATH}
-	cd ${BCS_UI_PATH} && ls -la && cd frontend && npm install && npm run build && cd ../ && go mod tidy -compat=1.17 && CGO_ENABLED=0 go build -trimpath ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-ui/bcs-ui ./cmd/bcs-ui
+	cd ${BCS_UI_PATH} && ls -la && cd frontend && npm install && npm run build && cd ../ && go mod tidy && CGO_ENABLED=0 go build -trimpath ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-ui/bcs-ui ./cmd/bcs-ui
 
-user-manager:pre
+user-manager:pre tongsuo
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-user-manager
 	cp -R ${BCS_CONF_SERVICES_PATH}/bcs-user-manager ${PACKAGEPATH}/bcs-services
 	cd bcs-services/bcs-user-manager/ && go mod tidy && $(CGO_BUILD_FLAGS) go build ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-user-manager/bcs-user-manager ./main.go
@@ -179,12 +181,12 @@ user-manager:pre
 webconsole:pre
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-webconsole
 	cp -R ${BCS_CONF_SERVICES_PATH}/bcs-webconsole ${PACKAGEPATH}/bcs-services
-	cd bcs-services/bcs-webconsole/ && go mod tidy -compat=1.17 && CGO_ENABLED=0 go build -trimpath ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-webconsole/bcs-webconsole ./main.go
+	cd bcs-services/bcs-webconsole/ && go mod tidy && CGO_ENABLED=0 go build -trimpath ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-webconsole/bcs-webconsole ./main.go
 
 monitor:pre
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-monitor
 	cp -R ${BCS_CONF_SERVICES_PATH}/bcs-monitor ${PACKAGEPATH}/bcs-services
-	cd bcs-services/bcs-monitor/ && go mod tidy -compat=1.17 && CGO_ENABLED=0 go build -trimpath ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-monitor/bcs-monitor ./cmd/bcs-monitor
+	cd bcs-services/bcs-monitor/ && go mod tidy && CGO_ENABLED=0 go build -trimpath ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-monitor/bcs-monitor ./cmd/bcs-monitor
 
 bscp:pre
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-bscp
@@ -262,7 +264,7 @@ ingress-controller:pre
 #end of network plugins
 
 # bcs-service section
-cluster-manager:pre
+cluster-manager:pre tongsuo
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-cluster-manager
 	cp -R ${BCS_CONF_SERVICES_PATH}/bcs-cluster-manager/* ${PACKAGEPATH}/bcs-services/bcs-cluster-manager/
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-cluster-manager/swagger
@@ -273,7 +275,12 @@ cluster-manager:pre
 cluster-reporter:
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-cluster-reporter
 	cp -R ${BCS_CONF_SERVICES_PATH}/bcs-cluster-reporter/* ${PACKAGEPATH}/bcs-services/bcs-cluster-reporter/
-	cd ${BCS_SERVICES_PATH}/bcs-cluster-reporter && go mod tidy && go build ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-cluster-reporter/bcs-cluster-reporter ./main.go
+	cd ${BCS_SERVICES_PATH}/bcs-cluster-reporter/cmd/reporter && go mod tidy && go build ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-cluster-reporter/bcs-cluster-reporter ./main.go
+
+nodeagent:
+	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-nodeagent
+	cp -R ${BCS_CONF_SERVICES_PATH}/bcs-cluster-reporter/* ${PACKAGEPATH}/bcs-services/bcs-nodeagent/
+	cd ${BCS_SERVICES_PATH}/bcs-cluster-reporter/cmd/nodeagent && go mod tidy && go build ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-nodeagent/bcs-nodeagent ./main.go
 
 project-manager:pre
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-project-manager/swagger
@@ -322,7 +329,7 @@ data-manager:pre
 	cp ${BCS_SERVICES_PATH}/bcs-data-manager/proto/bcs-data-manager/bcs-data-manager.swagger.json  ${PACKAGEPATH}/bcs-services/bcs-data-manager/swagger/bcs-data-manager.swagger.json
 	cd bcs-services/bcs-data-manager/ && go mod tidy -go=1.16 && go mod tidy -go=1.17 && go build ${LDFLAG} -o ${WORKSPACE}/${PACKAGEPATH}/bcs-services/bcs-data-manager/bcs-data-manager ./main.go
 
-helm-manager:pre
+helm-manager:pre tongsuo
 	mkdir -p ${PACKAGEPATH}/bcs-services/bcs-helm-manager
 	cp -R ${BCS_SERVICES_PATH}/bcs-helm-manager/images/bcs-helm-manager/* ${PACKAGEPATH}/bcs-services/bcs-helm-manager/
 	# swagger

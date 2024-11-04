@@ -161,12 +161,12 @@
 <script lang="ts">
 /* eslint-disable camelcase */
 import { throttle } from 'lodash';
-import { computed, defineComponent, onMounted, ref, set, watch } from 'vue';
+import { computed, defineComponent, onActivated, onMounted, ref, set, watch } from 'vue';
 
 import ApplyHost from '../components/apply-host.vue';
+import ClusterDetail from '../detail/index.vue';
 
 import ListMode from './cluster-list.vue';
-import ClusterDetail from './detail.vue';
 import SetAgentArea from './set-agent-area.vue';
 import SetConnectInfo from './set-connect-info.vue';
 import { useClusterList, useClusterOperate, useClusterOverview, useTask, useVCluster } from './use-cluster';
@@ -224,6 +224,7 @@ export default defineComponent({
     const hideSharedCluster = computed(() => $store.state.hideSharedCluster);
     const changeSharedClusterVisible = (v) => {
       $store.commit('updateHideClusterStatus', v);
+      handleGetClusterNodes();
     };
     // 集群状态
     const statusTextMap = {
@@ -475,9 +476,12 @@ export default defineComponent({
     // 集群节点数
     const clusterNodesMap = ref<Record<string, number>>({});
     const handleGetClusterNodes = async () => {
+      const clusterIDs = curClusterList.value.map(item => item.clusterID);
+      if (!clusterIDs.length) return;
+
       clusterNodesMap.value = {};
       const data = await clusterMeta({
-        clusters: curClusterList.value.map(item => item.clusterID),
+        clusters: clusterIDs,
       }).catch(() => []);
       data.map((item) => {
         set(clusterNodesMap.value, item.clusterId, item.clusterNodeNum);
@@ -553,6 +557,13 @@ export default defineComponent({
       handleScollActiveClusterIntoView();
       await handleGetClusterList();
       await handleGetClusterNodes();
+    });
+
+    // 激活时重新更新列表
+    onActivated(() => {
+      handleGetClusterList().then(() => {
+        handleGetClusterNodes();
+      });
     });
 
     return {

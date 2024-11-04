@@ -20,6 +20,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/constant"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/errf"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/i18n"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/iam/meta"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/kit"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/logs"
@@ -141,10 +143,22 @@ func (s *Service) BatchDeleteTemplate(ctx context.Context, req *pbcs.BatchDelete
 	if err != nil {
 		return nil, fmt.Errorf("invalid template ids, %s", err)
 	}
-	idsLen := len(templateIDs)
-	if idsLen == 0 || idsLen > constant.ArrayInputLenLimit {
-		return nil, fmt.Errorf("the length of template ids is %d, it must be within the range of [1,%d]",
-			idsLen, constant.ArrayInputLenLimit)
+
+	if req.ExclusionOperation {
+		result, err := s.client.DS.ListTemplatesNotBound(grpcKit.RpcCtx(), &pbds.ListTemplatesNotBoundReq{
+			BizId:           req.BizId,
+			TemplateSpaceId: req.TemplateSpaceId,
+			All:             true,
+		})
+		if err != nil {
+			logs.Errorf("list templates not bound failed, err: %v, rid: %s", err, grpcKit.Rid)
+			return nil, err
+		}
+		idsAll := []uint32{}
+		for _, v := range result.GetDetails() {
+			idsAll = append(idsAll, v.GetId())
+		}
+		templateIDs = tools.Difference(idsAll, templateIDs)
 	}
 
 	res := []*meta.ResourceAttribute{
@@ -253,10 +267,13 @@ func (s *Service) AddTmplsToTmplSets(ctx context.Context, req *pbcs.AddTmplsToTm
 	}
 
 	r := &pbds.AddTmplsToTmplSetsReq{
-		BizId:           req.BizId,
-		TemplateSpaceId: req.TemplateSpaceId,
-		TemplateIds:     req.TemplateIds,
-		TemplateSetIds:  req.TemplateSetIds,
+		BizId:              req.BizId,
+		TemplateSpaceId:    req.TemplateSpaceId,
+		TemplateIds:        req.TemplateIds,
+		TemplateSetIds:     req.TemplateSetIds,
+		ExclusionOperation: req.ExclusionOperation,
+		TemplateSetId:      req.TemplateSetId,
+		NoSetSpecified:     req.NoSetSpecified,
 	}
 
 	if _, err := s.client.DS.AddTmplsToTmplSets(grpcKit.RpcCtx(), r); err != nil {
@@ -269,21 +286,8 @@ func (s *Service) AddTmplsToTmplSets(ctx context.Context, req *pbcs.AddTmplsToTm
 
 // DeleteTmplsFromTmplSets delete templates from template sets
 func (s *Service) DeleteTmplsFromTmplSets(ctx context.Context, req *pbcs.DeleteTmplsFromTmplSetsReq) (
-	*pbcs.DeleteTmplsFromTmplSetsResp, error) {
+	*pbcs.BatchDeleteResp, error) {
 	grpcKit := kit.FromGrpcContext(ctx)
-
-	// validate input param
-	idsLen := len(req.TemplateIds)
-	if idsLen == 0 || idsLen > constant.ArrayInputLenLimit {
-		return nil, fmt.Errorf("the length of template ids is %d, it must be within the range of [1,%d]",
-			idsLen, constant.ArrayInputLenLimit)
-	}
-
-	idsLen2 := len(req.TemplateSetIds)
-	if idsLen2 == 0 || idsLen2 > constant.ArrayInputLenLimit {
-		return nil, fmt.Errorf("the length of template set ids is %d, it must be within the range of [1,%d]",
-			idsLen2, constant.ArrayInputLenLimit)
-	}
 
 	res := []*meta.ResourceAttribute{
 		{Basic: meta.Basic{Type: meta.Biz, Action: meta.FindBusinessResource}, BizID: req.BizId},
@@ -292,19 +296,53 @@ func (s *Service) DeleteTmplsFromTmplSets(ctx context.Context, req *pbcs.DeleteT
 		return nil, err
 	}
 
-	r := &pbds.DeleteTmplsFromTmplSetsReq{
-		BizId:           req.BizId,
-		TemplateSpaceId: req.TemplateSpaceId,
-		TemplateIds:     req.TemplateIds,
-		TemplateSetIds:  req.TemplateSetIds,
+	eg, egCtx := errgroup.WithContext(grpcKit.RpcCtx())
+	eg.SetLimit(10)
+
+	var successfulIDs, failedIDs []uint32
+	var mux sync.Mutex
+
+	// 使用 data-service 原子接口
+	for _, v := range req.GetTemplateSetIds() {
+		tid := v
+		eg.Go(func() error {
+
+			r := &pbds.DeleteTmplsFromTmplSetsReq{
+				BizId:              req.BizId,
+				TemplateSpaceId:    req.TemplateSpaceId,
+				TemplateSetId:      tid,
+				TemplateIds:        req.TemplateIds,
+				ExclusionOperation: req.ExclusionOperation,
+				NoSetSpecified:     req.NoSetSpecified,
+			}
+
+			if _, err := s.client.DS.DeleteTmplsFromTmplSets(egCtx, r); err != nil {
+				logs.Errorf("delete template from template sets failed, err: %v, rid: %s", err, grpcKit.Rid)
+				// 错误不返回异常，记录错误ID
+				mux.Lock()
+				failedIDs = append(failedIDs, tid)
+				mux.Unlock()
+				return nil
+			}
+
+			mux.Lock()
+			successfulIDs = append(successfulIDs, tid)
+			mux.Unlock()
+			return nil
+		})
 	}
 
-	if _, err := s.client.DS.DeleteTmplsFromTmplSets(grpcKit.RpcCtx(), r); err != nil {
-		logs.Errorf("update template failed, err: %v, rid: %s", err, grpcKit.Rid)
-		return nil, err
+	if err := eg.Wait(); err != nil {
+		logs.Errorf("delete template from template sets failed, err: %v, rid: %s", err, grpcKit.Rid)
+		return nil, errf.Errorf(errf.Aborted, i18n.T(grpcKit, "delete template from template sets failed"))
 	}
 
-	return &pbcs.DeleteTmplsFromTmplSetsResp{}, nil
+	// 全部失败, 当前API视为失败
+	if len(failedIDs) == len(req.GetTemplateSetIds()) {
+		return nil, errf.Errorf(errf.Aborted, i18n.T(grpcKit, "delete template from template sets failed"))
+	}
+
+	return &pbcs.BatchDeleteResp{SuccessfulIds: successfulIDs, FailedIds: failedIDs}, nil
 }
 
 // ListTemplatesByIDs list templates by ids
@@ -464,63 +502,48 @@ func (s *Service) BatchUpsertTemplates(ctx context.Context, req *pbcs.BatchUpser
 	if err := s.authorizer.Authorize(grpcKit, res...); err != nil {
 		return nil, err
 	}
+
 	items := make([]*pbds.BatchUpsertTemplatesReq_Item, 0, len(req.Items))
-	var mu sync.Mutex
-	var g errgroup.Group
-	g.SetLimit(constant.MaxConcurrentUpload)
+
 	for _, item := range req.Items {
-		i := item
-		g.Go(func() error {
-			// validate if file content uploaded.
-			metadata, err := s.client.provider.Metadata(grpcKit, i.Sign)
-			if err != nil {
-				logs.Errorf("validate file content uploaded failed, err: %v, rid: %s", err, grpcKit.Rid)
-				return err
-			}
-			mu.Lock()
-			items = append(items, &pbds.BatchUpsertTemplatesReq_Item{
-				Template: &pbtemplate.Template{
-					Id: i.Id,
-					Spec: &pbtemplate.TemplateSpec{
-						Name: i.Name,
-						Path: i.Path,
-						Memo: i.Memo,
+		items = append(items, &pbds.BatchUpsertTemplatesReq_Item{
+			Template: &pbtemplate.Template{
+				Id: item.Id,
+				Spec: &pbtemplate.TemplateSpec{
+					Name: item.Name,
+					Path: item.Path,
+					Memo: item.Memo,
+				},
+				Attachment: &pbtemplate.TemplateAttachment{
+					BizId:           req.BizId,
+					TemplateSpaceId: req.TemplateSpaceId,
+				},
+			},
+			TemplateRevision: &pbtr.TemplateRevision{
+				Spec: &pbtr.TemplateRevisionSpec{
+					Name:     item.Name,
+					Path:     item.Path,
+					FileType: item.FileType,
+					FileMode: item.FileMode,
+					Permission: &pbci.FilePermission{
+						User:      item.User,
+						UserGroup: item.UserGroup,
+						Privilege: item.Privilege,
 					},
-					Attachment: &pbtemplate.TemplateAttachment{
-						BizId:           req.BizId,
-						TemplateSpaceId: req.TemplateSpaceId,
+					ContentSpec: &pbcontent.ContentSpec{
+						Signature: item.Sign,
+						ByteSize:  item.ByteSize,
+						Md5:       item.Md5,
 					},
 				},
-				TemplateRevision: &pbtr.TemplateRevision{
-					Spec: &pbtr.TemplateRevisionSpec{
-						Name:     i.Name,
-						Path:     i.Path,
-						FileType: i.FileType,
-						FileMode: i.FileMode,
-						Permission: &pbci.FilePermission{
-							User:      i.User,
-							UserGroup: i.UserGroup,
-							Privilege: i.Privilege,
-						},
-						ContentSpec: &pbcontent.ContentSpec{
-							Signature: i.Sign,
-							ByteSize:  i.ByteSize,
-							Md5:       metadata.Md5,
-						},
-					},
-					Attachment: &pbtr.TemplateRevisionAttachment{
-						BizId:           req.BizId,
-						TemplateSpaceId: req.TemplateSpaceId,
-					},
+				Attachment: &pbtr.TemplateRevisionAttachment{
+					BizId:           req.BizId,
+					TemplateSpaceId: req.TemplateSpaceId,
 				},
-			})
-			mu.Unlock()
-			return nil
+			},
 		})
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
+
 	in := &pbds.BatchUpsertTemplatesReq{Items: items, TemplateSetIds: req.GetTemplateSetIds(), BizId: req.GetBizId()}
 	data, err := s.client.DS.BatchUpsertTemplates(grpcKit.RpcCtx(), in)
 	if err != nil {
@@ -549,12 +572,16 @@ func (s *Service) BatchUpdateTemplatePermissions(ctx context.Context, req *pbcs.
 	}
 
 	resp, err := s.client.DS.BatchUpdateTemplatePermissions(grpcKit.RpcCtx(), &pbds.BatchUpdateTemplatePermissionsReq{
-		BizId:       req.BizId,
-		TemplateIds: req.TemplateIds,
-		User:        req.User,
-		UserGroup:   req.UserGroup,
-		Privilege:   req.Privilege,
-		AppIds:      req.AppIds,
+		BizId:              req.BizId,
+		TemplateIds:        req.TemplateIds,
+		User:               req.User,
+		UserGroup:          req.UserGroup,
+		Privilege:          req.Privilege,
+		AppIds:             req.AppIds,
+		TemplateSpaceId:    req.TemplateSpaceId,
+		TemplateSetId:      req.TemplateSetId,
+		ExclusionOperation: req.ExclusionOperation,
+		NoSetSpecified:     req.NoSetSpecified,
 	})
 
 	if err != nil {

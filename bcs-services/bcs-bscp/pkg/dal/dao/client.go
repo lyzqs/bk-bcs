@@ -78,6 +78,9 @@ type Client interface {
 	// ListClientGroupByTargetReleaseID 按目标版本 ID 列出客户端组
 	ListClientGroupByTargetReleaseID(kit *kit.Kit, bizID, appID uint32, heartbeatTime int64,
 		search *pbclient.ClientQueryCondition) ([]types.TargetConfigVersionChart, error)
+	// CountNumberOlineClients 统计客户端在线数量
+	CountNumberOlineClients(kit *kit.Kit, bizID, appID uint32, heartbeatTime int64,
+		search *pbclient.ClientQueryCondition) (int64, error)
 }
 
 var _ Client = new(clientDao)
@@ -86,6 +89,31 @@ type clientDao struct {
 	genQ     *gen.Query
 	idGen    IDGenInterface
 	auditDao AuditDao
+}
+
+// CountNumberOlineClients 统计客户端在线数量
+func (dao *clientDao) CountNumberOlineClients(kit *kit.Kit, bizID uint32, appID uint32, heartbeatTime int64,
+	search *pbclient.ClientQueryCondition) (int64, error) {
+
+	m := dao.genQ.Client
+	q := dao.genQ.Client.WithContext(kit.Ctx).Where(m.BizID.Eq(bizID),
+		m.AppID.Eq(appID), m.OnlineStatus.Eq("online"))
+
+	var err error
+	var conds []rawgen.Condition
+	if search.String() != "" {
+		conds, err = dao.handleSearch(kit, bizID, appID, search)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	if heartbeatTime > 0 {
+		lastHeartbeatTime := time.Now().UTC().Add(time.Duration(-heartbeatTime) * time.Minute)
+		conds = append(conds, q.Where(m.LastHeartbeatTime.Gte(lastHeartbeatTime)))
+	}
+
+	return q.Where(conds...).Count()
 }
 
 // ListClientGroupByTargetReleaseID 按目标版本 ID 列出客户端组
@@ -798,7 +826,7 @@ func (dao *clientDao) UpsertVersionChange(kit *kit.Kit, tx *gen.QueryTx, data []
 			"current_release_id", "target_release_id", "specific_failed_reason",
 			"release_change_status", "release_change_failed_reason", "failed_detail_reason",
 			"cpu_usage", "cpu_max_usage", "cpu_min_usage", "cpu_avg_usage",
-			"memory_usage", "memory_max_usage", "memory_min_usage", "memory_avg_usage",
+			"memory_usage", "memory_max_usage", "memory_min_usage", "memory_avg_usage", "total_seconds",
 		}),
 	}).CreateInBatches(data, 500)
 }

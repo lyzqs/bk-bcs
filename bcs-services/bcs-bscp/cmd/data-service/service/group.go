@@ -99,7 +99,9 @@ func (s *Service) ListAllGroups(ctx context.Context, req *pbds.ListAllGroupsReq)
 
 	resp := new(pbds.ListAllGroupsResp)
 
-	details, err := s.dao.Group().ListAll(kt, req.BizId)
+	// StrToUint32Slice the comma separated string goes to uint32 slice
+	topIds, _ := tools.StrToUint32Slice(req.TopIds)
+	details, err := s.dao.Group().ListAll(kt, req.BizId, topIds)
 	if err != nil {
 		logs.Errorf("list group failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -150,7 +152,7 @@ func (s *Service) ListAppGroups(ctx context.Context, req *pbds.ListAppGroupsReq)
 		Spec: &table.GroupSpec{
 			Name:     "默认分组",
 			Public:   true,
-			Mode:     table.Default,
+			Mode:     table.GroupModeDefault,
 			Selector: new(selector.Selector),
 			UID:      "",
 		},

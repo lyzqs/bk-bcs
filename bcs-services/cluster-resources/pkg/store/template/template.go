@@ -150,6 +150,31 @@ func (m *ModelTemplate) CreateTemplate(
 	return template.ID.Hex(), nil
 }
 
+// CreateTemplateBatch create a batch entity.Template into database
+func (m *ModelTemplate) CreateTemplateBatch(ctx context.Context, templates []*entity.Template) error {
+	if len(templates) == 0 {
+		return nil
+	}
+
+	if err := m.ensureTable(ctx); err != nil {
+		return err
+	}
+
+	insertValues := make([]interface{}, 0)
+	now := time.Now()
+	for _, template := range templates {
+		// id 覆盖及时间覆盖
+		template.ID = primitive.NewObjectIDFromTimestamp(now)
+		template.CreateAt = now.UTC().Unix()
+		template.UpdateAt = now.UTC().Unix()
+		insertValues = append(insertValues, template)
+	}
+	if _, err := m.db.Table(m.tableName).Insert(ctx, insertValues); err != nil {
+		return err
+	}
+	return nil
+}
+
 // UpdateTemplate update an entity.Template into database
 func (m *ModelTemplate) UpdateTemplate(ctx context.Context, id string, template entity.M) error {
 	if id == "" {
@@ -217,6 +242,29 @@ func (m *ModelTemplate) UpdateTemplateBySpecial(
 	}
 
 	if _, err = m.db.Table(m.tableName).UpdateMany(ctx, cond, operator.M{"$set": template}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateTemplateBySpaceAndName update a template byu space and template name
+func (m *ModelTemplate) UpdateTemplateBySpaceAndName(
+	ctx context.Context, projectCode, templateSpace, templateName string, template entity.M) error {
+
+	operatorM := operator.M{
+		entity.FieldKeyProjectCode:   projectCode,
+		entity.FieldKeyTemplateSpace: templateSpace,
+		entity.FieldKeyName:          templateName,
+	}
+
+	cond := operator.NewLeafCondition(operator.Eq, operatorM)
+
+	if template[entity.FieldKeyUpdateAt] == nil {
+		template.Update(entity.FieldKeyUpdateAt, time.Now().UTC().Unix())
+	}
+
+	if _, err := m.db.Table(m.tableName).UpdateMany(ctx, cond, operator.M{"$set": template}); err != nil {
 		return err
 	}
 

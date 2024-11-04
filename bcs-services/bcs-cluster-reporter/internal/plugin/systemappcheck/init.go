@@ -10,18 +10,12 @@
  * limitations under the License.
  */
 
-// Package systempodcheck xxx
-package systempodcheck
+// Package systemappcheck xxx
+package systemappcheck
 
-import (
-	"sync"
+import "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-reporter/internal/pluginmanager"
 
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-reporter/internal/plugin_manager"
-)
-
+// 检测系统命名空间下的应用与静态pod
 func init() {
-	plugin_manager.Register(&Plugin{
-		checkLock: sync.Mutex{},
-		stopChan:  make(chan int),
-	})
+	pluginmanager.Register(&Plugin{})
 }

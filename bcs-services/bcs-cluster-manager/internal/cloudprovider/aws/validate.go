@@ -25,6 +25,7 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/aws/api"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/clusterops"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/common"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/types"
 )
 
@@ -242,7 +243,7 @@ func (c *CloudValidate) CreateNodeGroupValidate(req *proto.CreateNodeGroupReques
 		return fmt.Errorf("%s CreateNodeGroupValidate request lost valid region info", cloudName)
 	}
 
-	if req.AutoScaling.GetNodeRole() == "" {
+	if req.AutoScaling.GetServiceRole() == "" {
 		return fmt.Errorf("%s CreateNodeGroupValidate request lost valid nodeRole info", cloudName)
 	}
 
@@ -252,7 +253,40 @@ func (c *CloudValidate) CreateNodeGroupValidate(req *proto.CreateNodeGroupReques
 // CreateClusterValidate create cluster validate
 func (c *CloudValidate) CreateClusterValidate(req *proto.CreateClusterReq,
 	opt *cloudprovider.CommonOption) error {
-	return cloudprovider.ErrCloudNotImplemented
+	if c == nil || req == nil || opt == nil {
+		return fmt.Errorf("%s CreateClusterValidate request&options is empty", cloudName)
+	}
+
+	if len(opt.Account.SecretID) == 0 || len(opt.Account.SecretKey) == 0 || len(opt.Region) == 0 {
+		return fmt.Errorf("%s CreateClusterValidate lost valid crendential info", cloudName)
+	}
+
+	for _, ng := range req.NodeGroups {
+		if ng.AutoScaling != nil {
+			if ng.AutoScaling.DesiredSize > ng.AutoScaling.MaxSize {
+				return fmt.Errorf("%s CreateClusterValidate nodegroup[%s] desiredSize can't larger than maxSize",
+					cloudName, ng.NodeGroupID)
+			}
+			if ng.AutoScaling.DesiredSize < ng.AutoScaling.MinSize {
+				return fmt.Errorf("%s CreateClusterValidate nodegroup[%s] desiredSize can't less than minSize",
+					cloudName, ng.NodeGroupID)
+			}
+			if ng.AutoScaling.MinSize > ng.AutoScaling.MaxSize {
+				return fmt.Errorf("%s CreateClusterValidate nodegroup[%s] minSize can't larger than maxSize",
+					cloudName, ng.NodeGroupID)
+			}
+		}
+	}
+
+	// default not handle systemReinstall
+	req.SystemReinstall = true
+
+	// cluster category
+	if len(req.ClusterCategory) == 0 {
+		req.ClusterCategory = common.Builder
+	}
+
+	return nil
 }
 
 // AddNodesToClusterValidate addNodes validate
@@ -314,7 +348,20 @@ func (c *CloudValidate) ListCloudVpcsValidate(req *proto.ListCloudVpcsRequest, a
 
 // ListKeyPairsValidate list keyPairs validate
 func (c *CloudValidate) ListKeyPairsValidate(req *proto.ListKeyPairsRequest, account *proto.Account) error {
-	return cloudprovider.ErrCloudNotImplemented
+	// call awsCloud interface to check account
+	if c == nil || req == nil {
+		return fmt.Errorf("%s ListKeyPairsValidate request is empty", cloudName)
+	}
+
+	if len(req.Region) == 0 {
+		return fmt.Errorf("%s ListKeyPairsValidate request lost valid region info", cloudName)
+	}
+
+	if account == nil || len(account.SecretID) == 0 || len(account.SecretKey) == 0 {
+		return fmt.Errorf("%s ListKeyPairsValidate request lost valid crendential info", cloudName)
+	}
+
+	return nil
 }
 
 // ListInstancesValidate list instance validate

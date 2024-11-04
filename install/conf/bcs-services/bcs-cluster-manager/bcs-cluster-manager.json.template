@@ -101,7 +101,8 @@
             "chartName": "${bcsCAChartName}",
             "releaseName": "${bcsCAReleaseName}",
             "releaseNamespace": "${bcsCAReleaseNamespace}",
-            "isPublicRepo": ${bcsCAIsPublicRepo}
+            "isPublicRepo": ${bcsCAIsPublicRepo},
+            "caImageRegistry": "${bcsCAImageRegistry}"
         },
         "watch": {
             "chartName": "${bcsWatchChartName}",
@@ -180,7 +181,9 @@
         }
     },
     "daemon": {
-        "enable": ${bcsDaemonEnable}
+        "enable": ${bcsDaemonEnable},
+        "enableInsTypeUsage": ${enableInsTypeUsage},
+        "enableAllocateCidr": ${enableAllocateCidr}
     },
     "tagDepart": "${tagDepart}",
     "prefixVcluster": "${prefixVcluster}",

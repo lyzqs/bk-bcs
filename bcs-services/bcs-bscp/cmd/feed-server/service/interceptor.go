@@ -24,6 +24,10 @@ import (
 
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/criteria/constant"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/kit"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/logs"
+	pbfs "github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/protocol/feed-server"
+	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/runtime/jsoni"
+	sfs "github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/sf-share"
 	"github.com/TencentBlueKing/bk-bcs/bcs-services/bcs-bscp/pkg/types"
 )
 
@@ -111,10 +115,105 @@ func FeedUnaryAuthInterceptor(
 
 	ctx = context.WithValue(ctx, constant.BizIDKey, bizID) //nolint:staticcheck
 
-	svr := info.Server.(*Service)
-	ctx, err := svr.authorize(ctx, bizID)
+	svc, ok := info.Server.(*Service)
+	// 处理非业务 Service 时不鉴权，如 GRPC Reflection
+	if !ok {
+		return handler(ctx, req)
+	}
+
+	ctx, err := svc.authorize(ctx, bizID)
 	if err != nil {
 		return nil, err
+	}
+
+	return handler(ctx, req)
+}
+
+// FeedUnaryUpdateLastConsumedTimeInterceptor feed 更新拉取时间中间件
+func FeedUnaryUpdateLastConsumedTimeInterceptor(ctx context.Context, req interface{},
+	info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+
+	svc, ok := info.Server.(*Service)
+	// 跳过非业务 Service，如 GRPC Reflection
+	if !ok {
+		return handler(ctx, req)
+	}
+
+	type lastConsumedTime struct {
+		BizID    uint32
+		AppNames []string
+		AppIDs   []uint32
+	}
+
+	param := lastConsumedTime{}
+
+	switch info.FullMethod {
+	case pbfs.Upstream_GetKvValue_FullMethodName:
+		request := req.(*pbfs.GetKvValueReq)
+		param.BizID = request.BizId
+		param.AppNames = append(param.AppNames, request.GetAppMeta().App)
+	case pbfs.Upstream_PullKvMeta_FullMethodName:
+		request := req.(*pbfs.PullKvMetaReq)
+		param.BizID = request.BizId
+		param.AppNames = append(param.AppNames, request.GetAppMeta().App)
+	case pbfs.Upstream_Messaging_FullMethodName:
+		request := req.(*pbfs.MessagingMeta)
+		if sfs.MessagingType(request.Type) == sfs.VersionChangeMessage {
+			vc := new(sfs.VersionChangePayload)
+			if err := vc.Decode(request.Payload); err != nil {
+				logs.Errorf("version change message decoding failed, %s", err.Error())
+				return handler(ctx, req)
+			}
+			param.BizID = vc.BasicData.BizID
+			param.AppNames = append(param.AppNames, vc.Application.App)
+		}
+	case pbfs.Upstream_Watch_FullMethodName:
+		request := req.(*pbfs.SideWatchMeta)
+		payload := new(sfs.SideWatchPayload)
+		if err := jsoni.Unmarshal(request.Payload, payload); err != nil {
+			logs.Errorf("parse request payload failed, %s", err.Error())
+			return handler(ctx, req)
+		}
+		param.BizID = payload.BizID
+		for _, v := range payload.Applications {
+			param.AppNames = append(param.AppNames, v.App)
+		}
+	case pbfs.Upstream_PullAppFileMeta_FullMethodName:
+		request := req.(*pbfs.PullAppFileMetaReq)
+		param.BizID = request.BizId
+		param.AppNames = append(param.AppNames, request.GetAppMeta().App)
+	case pbfs.Upstream_GetDownloadURL_FullMethodName:
+		request := req.(*pbfs.GetDownloadURLReq)
+		param.BizID = request.BizId
+		param.AppIDs = append(param.AppIDs, request.GetFileMeta().GetConfigItemAttachment().AppId)
+	case pbfs.Upstream_GetSingleKvValue_FullMethodName, pbfs.Upstream_GetSingleKvMeta_FullMethodName:
+		request := req.(*pbfs.GetSingleKvValueReq)
+		param.BizID = request.BizId
+		param.AppNames = append(param.AppNames, request.GetAppMeta().App)
+	default:
+		return handler(ctx, req)
+	}
+
+	if param.BizID != 0 {
+		ctx = context.WithValue(ctx, constant.BizIDKey, param.BizID) //nolint:staticcheck
+
+		if len(param.AppIDs) == 0 {
+			for _, appName := range param.AppNames {
+				appID, err := svc.bll.AppCache().GetAppID(kit.FromGrpcContext(ctx), param.BizID, appName)
+				if err != nil {
+					logs.Errorf("get app id failed, err: %v", err)
+					return handler(ctx, req)
+				}
+				param.AppIDs = append(param.AppIDs, appID)
+			}
+		}
+
+		if err := svc.bll.AppCache().BatchUpdateLastConsumedTime(kit.FromGrpcContext(ctx),
+			param.BizID, param.AppIDs); err != nil {
+			logs.Errorf("batch update app last consumed failed, err: %v", err)
+			return handler(ctx, req)
+		}
+		logs.Infof("batch update app last consumed time success")
 	}
 
 	return handler(ctx, req)
@@ -140,7 +239,12 @@ func FeedStreamAuthInterceptor(
 	}
 
 	var bizID uint32
-	ctx, err := srv.(*Service).authorize(ss.Context(), bizID)
+	svc, ok := srv.(*Service)
+	// 处理非业务 Service 时不鉴权，如 GRPC Reflection
+	if !ok {
+		return handler(srv, ss)
+	}
+	ctx, err := svc.authorize(ss.Context(), bizID)
 	if err != nil {
 		return err
 	}

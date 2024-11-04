@@ -21,19 +21,26 @@ import (
 	"github.com/google/uuid"
 )
 
+// TaskBuilder ...
+type TaskBuilder interface { // nolint
+	TaskInfo() TaskInfo
+	Steps() ([]*Step, error)    // Steps init step and define StepSequence
+	FinalizeTask(t *Task) error // FinalizeTask for custom task
+}
+
 // TaskOptions xxx
 type TaskOptions struct {
-	CallBackFuncName    string
+	CallbackName        string
 	MaxExecutionSeconds uint32
 }
 
 // TaskOption xxx
 type TaskOption func(opt *TaskOptions)
 
-// WithTaskCallBackFunc xxx
-func WithTaskCallBackFunc(callBackName string) TaskOption {
+// WithTaskCallback xxx
+func WithTaskCallback(callbackName string) TaskOption {
 	return func(opt *TaskOptions) {
-		opt.CallBackFuncName = callBackName
+		opt.CallbackName = callbackName
 	}
 }
 
@@ -46,37 +53,35 @@ func WithTaskMaxExecutionSeconds(timeout uint32) TaskOption {
 
 // TaskInfo task basic info definition
 type TaskInfo struct {
-	// TaskIndex for resource index
-	TaskIndex string
-	TaskType  string
-	TaskName  string
-	Creator   string
+	TaskType      string
+	TaskName      string
+	TaskIndex     string // TaskIndex for resource index
+	TaskIndexType string
+	Creator       string
 }
 
 // NewTask create new task by default
-func NewTask(o *TaskInfo, opts ...TaskOption) *Task {
-	defaultOptions := &TaskOptions{CallBackFuncName: "", MaxExecutionSeconds: 0}
+func NewTask(o TaskInfo, opts ...TaskOption) *Task {
+	defaultOptions := &TaskOptions{CallbackName: "", MaxExecutionSeconds: 0}
 	for _, opt := range opts {
 		opt(defaultOptions)
 	}
 
-	nowTime := time.Now().Format(TaskTimeFormat)
+	now := time.Now()
 	return &Task{
-		TaskIndex:           o.TaskIndex,
 		TaskID:              uuid.NewString(),
 		TaskType:            o.TaskType,
 		TaskName:            o.TaskName,
+		TaskIndex:           o.TaskIndex,
+		TaskIndexType:       o.TaskIndexType,
 		Status:              TaskStatusInit,
-		ForceTerminate:      false,
-		Start:               nowTime,
-		Steps:               make(map[string]*Step, 0),
-		StepSequence:        make([]string, 0),
+		Steps:               make([]*Step, 0),
 		Creator:             o.Creator,
 		Updater:             o.Creator,
-		LastUpdate:          nowTime,
+		LastUpdate:          now,
 		CommonParams:        make(map[string]string, 0),
-		ExtraJson:           DefaultJsonExtrasContent,
-		CallBackFuncName:    defaultOptions.CallBackFuncName,
+		CommonPayload:       DefaultPayloadContent,
+		CallbackName:        defaultOptions.CallbackName,
 		Message:             DefaultTaskMessage,
 		MaxExecutionSeconds: defaultOptions.MaxExecutionSeconds,
 	}
@@ -85,11 +90,6 @@ func NewTask(o *TaskInfo, opts ...TaskOption) *Task {
 // GetTaskID get task id
 func (t *Task) GetTaskID() string {
 	return t.TaskID
-}
-
-// GetIndex get task id
-func (t *Task) GetIndex() string {
-	return t.TaskIndex
 }
 
 // GetTaskType get task type
@@ -102,30 +102,38 @@ func (t *Task) GetTaskName() string {
 	return t.TaskName
 }
 
+// GetTaskIndex get task index
+func (t *Task) GetTaskIndex() string {
+	return t.TaskIndex
+}
+
+// GetTaskIndexType get task index type
+func (t *Task) GetTaskIndexType() string {
+	return t.TaskIndexType
+}
+
 // GetStep get step by name
 func (t *Task) GetStep(stepName string) (*Step, bool) {
-	if _, ok := t.Steps[stepName]; !ok {
-		return nil, false
+	for _, step := range t.Steps {
+		if step.Name == stepName {
+			return step, true
+		}
 	}
-	return t.Steps[stepName], true
+	return nil, false
 }
 
 // AddStep add step to task
 func (t *Task) AddStep(step *Step) *Task {
 	if step == nil {
-		return t
+		t.Steps = make([]*Step, 0)
 	}
 
-	if t.StepSequence == nil {
-		t.StepSequence = make([]string, 0)
-	}
-	t.StepSequence = append(t.StepSequence, step.GetName())
-	t.Steps[step.GetName()] = step
+	t.Steps = append(t.Steps, step)
 	return t
 }
 
-// GetCommonParams get common params
-func (t *Task) GetCommonParams(key string) (string, bool) {
+// GetCommonParam get common params
+func (t *Task) GetCommonParam(key string) (string, bool) {
 	if t.CommonParams == nil {
 		t.CommonParams = make(map[string]string, 0)
 		return "", false
@@ -136,8 +144,8 @@ func (t *Task) GetCommonParams(key string) (string, bool) {
 	return "", false
 }
 
-// AddCommonParams add common params
-func (t *Task) AddCommonParams(k, v string) *Task {
+// AddCommonParam add common params
+func (t *Task) AddCommonParam(k, v string) *Task {
 	if t.CommonParams == nil {
 		t.CommonParams = make(map[string]string, 0)
 	}
@@ -147,30 +155,30 @@ func (t *Task) AddCommonParams(k, v string) *Task {
 
 // GetCallback set callback function name
 func (t *Task) GetCallback() string {
-	return t.CallBackFuncName
+	return t.CallbackName
 }
 
 // SetCallback set callback function name
-func (t *Task) SetCallback(callBackFuncName string) *Task {
-	t.CallBackFuncName = callBackFuncName
+func (t *Task) SetCallback(callBackName string) *Task {
+	t.CallbackName = callBackName
 	return t
 }
 
-// GetExtra get extra json
-func (t *Task) GetExtra(obj interface{}) error {
-	if t.ExtraJson == "" {
-		t.ExtraJson = DefaultJsonExtrasContent
+// GetCommonPayload unmarshal common payload to struct obj
+func (t *Task) GetCommonPayload(obj any) error {
+	if len(t.CommonPayload) == 0 {
+		t.CommonPayload = DefaultPayloadContent
 	}
-	return json.Unmarshal([]byte(t.ExtraJson), obj)
+	return json.Unmarshal([]byte(t.CommonPayload), obj)
 }
 
-// SetExtraAll set extra json
-func (t *Task) SetExtraAll(obj interface{}) error {
+// SetCommonPayload marshal struct obj to common payload
+func (t *Task) SetCommonPayload(obj any) error {
 	result, err := json.Marshal(obj)
 	if err != nil {
 		return err
 	}
-	t.ExtraJson = string(result)
+	t.CommonPayload = string(result)
 	return nil
 }
 
@@ -196,36 +204,25 @@ func (t *Task) SetMessage(msg string) *Task {
 	return t
 }
 
-// GetForceTerminate get force terminate
-func (t *Task) GetForceTerminate() bool {
-	return t.ForceTerminate
-}
-
-// SetForceTerminate set force terminate
-func (t *Task) SetForceTerminate(f bool) *Task {
-	t.ForceTerminate = f
-	return t
-}
-
 // GetStartTime get start time
-func (t *Task) GetStartTime() (time.Time, error) {
-	return time.Parse(TaskTimeFormat, t.Start)
+func (t *Task) GetStartTime() time.Time {
+	return t.Start
 }
 
 // SetStartTime set start time
 func (t *Task) SetStartTime(time time.Time) *Task {
-	t.Start = time.Format(TaskTimeFormat)
+	t.Start = time
 	return t
 }
 
 // GetEndTime get end time
-func (t *Task) GetEndTime() (time.Time, error) {
-	return time.Parse(TaskTimeFormat, t.End)
+func (t *Task) GetEndTime() time.Time {
+	return t.End
 }
 
 // SetEndTime set end time
 func (t *Task) SetEndTime(time time.Time) *Task {
-	t.End = time.Format(TaskTimeFormat)
+	t.End = time
 	return t
 }
 
@@ -236,18 +233,18 @@ func (t *Task) GetExecutionTime() time.Duration {
 
 // SetExecutionTime set execution time
 func (t *Task) SetExecutionTime(start time.Time, end time.Time) *Task {
-	t.ExecutionTime = uint32(end.Sub(start).Seconds())
+	t.ExecutionTime = uint32(end.Sub(start).Milliseconds())
 	return t
 }
 
-// GetMaxExecutionSeconds get max execution seconds
-func (t *Task) GetMaxExecutionSeconds() time.Duration {
+// GetMaxExecution get max execution seconds
+func (t *Task) GetMaxExecution() time.Duration {
 	return time.Duration(t.MaxExecutionSeconds) * time.Second
 }
 
-// SetMaxExecutionSeconds set max execution seconds
-func (t *Task) SetMaxExecutionSeconds(maxExecutionSeconds time.Duration) *Task {
-	t.MaxExecutionSeconds = uint32(maxExecutionSeconds.Seconds())
+// SetMaxExecution set max execution seconds
+func (t *Task) SetMaxExecution(duration time.Duration) *Task {
+	t.MaxExecutionSeconds = uint32(duration.Seconds())
 	return t
 }
 
@@ -275,12 +272,12 @@ func (t *Task) SetUpdater(updater string) *Task {
 
 // GetLastUpdate get last update time
 func (t *Task) GetLastUpdate() (time.Time, error) {
-	return time.Parse(TaskTimeFormat, t.LastUpdate)
+	return t.LastUpdate, nil
 }
 
 // SetLastUpdate set last update time
 func (t *Task) SetLastUpdate(lastUpdate time.Time) *Task {
-	t.LastUpdate = lastUpdate.Format(TaskTimeFormat)
+	t.LastUpdate = lastUpdate
 	return t
 }
 
@@ -316,11 +313,42 @@ func (t *Task) AddStepParams(stepName string, k, v string) error {
 
 // AddStepParamsBatch add step params batch
 func (t *Task) AddStepParamsBatch(stepName string, params map[string]string) error {
-	if _, ok := t.Steps[stepName]; !ok {
+	step, ok := t.GetStep(stepName)
+	if !ok {
 		return fmt.Errorf("step %s not exist", stepName)
 	}
+
 	for k, v := range params {
-		t.Steps[stepName].AddParam(k, v)
+		step.AddParam(k, v)
 	}
+	return nil
+}
+
+// Validate 校验 task
+func (t *Task) Validate() error {
+	if t.TaskName == "" {
+		return fmt.Errorf("task name is required")
+	}
+
+	if len(t.Steps) == 0 {
+		return fmt.Errorf("task steps empty")
+	}
+
+	uniq := map[string]struct{}{}
+	for _, s := range t.Steps {
+		if s.Name == "" {
+			return fmt.Errorf("step name is required")
+		}
+
+		if s.Executor == "" {
+			return fmt.Errorf("step executor is required")
+		}
+
+		if _, ok := uniq[s.Name]; ok {
+			return fmt.Errorf("step name %s is not unique", s.Name)
+		}
+		uniq[s.Name] = struct{}{}
+	}
+
 	return nil
 }

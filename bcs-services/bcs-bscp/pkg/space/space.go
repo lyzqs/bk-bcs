@@ -28,15 +28,16 @@ import (
 
 // Type 空间类型
 type Type struct {
-	ID   string
-	Name string
+	ID     string
+	Name   string
+	EnName string
 }
 
 var (
 	// BCS 项目类型
-	BCS = Type{ID: "bcs", Name: "容器项目"}
+	BCS = Type{ID: "bcs", Name: "容器项目", EnName: "Container Project"}
 	// BK_CMDB cmdb 业务类型
-	BK_CMDB = Type{ID: "bkcmdb", Name: "业务"}
+	BK_CMDB = Type{ID: "bkcmdb", Name: "业务", EnName: "Business"}
 )
 
 // Status 空间状态, 预留
@@ -54,6 +55,7 @@ type Space struct {
 	SpaceTypeID   string
 	SpaceTypeName string
 	SpaceUid      string
+	SpaceEnName   string
 }
 
 // Manager Space定时拉取
@@ -141,8 +143,8 @@ func (s *Manager) AllSpaces() []*Space {
 	return s.cachedSpace
 }
 
-// allCMDBSpaces 返回全量CMDB空间
-func (s *Manager) allCMDBSpaces() map[string]struct{} {
+// AllCMDBSpaces 返回全量CMDB空间
+func (s *Manager) AllCMDBSpaces() map[string]struct{} {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -204,6 +206,7 @@ func (s *Manager) fetchAllSpace(ctx context.Context) error {
 			SpaceName:     biz.BizName,
 			SpaceTypeID:   BK_CMDB.ID,
 			SpaceTypeName: BK_CMDB.Name,
+			SpaceEnName:   BK_CMDB.EnName,
 			SpaceUid:      BuildSpaceUid(BK_CMDB, strconv.FormatInt(biz.BizID, 10)),
 		})
 		cmdbSpaces[bizID] = struct{}{}
@@ -239,7 +242,7 @@ func BuildSpaceUid(t Type, id string) string {
 
 // HasCMDBSpace checks if cmdb space exists
 func (s *Manager) HasCMDBSpace(spaceId string) bool {
-	if _, ok := s.allCMDBSpaces()[spaceId]; ok {
+	if _, ok := s.AllCMDBSpaces()[spaceId]; ok {
 		return true
 	}
 
@@ -256,7 +259,7 @@ func (s *Manager) HasCMDBSpace(spaceId string) bool {
 	s.requestedCmdbSpaces[spaceId] = struct{}{}
 	s.mtx.Unlock()
 
-	if _, ok := s.allCMDBSpaces()[spaceId]; ok {
+	if _, ok := s.AllCMDBSpaces()[spaceId]; ok {
 		return true
 	}
 	return false

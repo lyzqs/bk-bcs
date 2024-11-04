@@ -1,27 +1,42 @@
 <template>
   <CommonConfigTable
-    v-model:selectedConfigs="selectedConfigs"
+    v-model:selected-configs="selectedConfigs"
     ref="configTable"
     :key="currentPkg"
     :show-cited-by-pkgs-col="true"
     :show-bound-by-apps-col="true"
     :current-pkg="currentPkg"
-    :get-config-list="getConfigList">
+    :get-config-list="getConfigList"
+    :is-across-checked="acrossCheckedType.isAcrossChecked"
+    :data-count="acrossCheckedType.dataCount"
+    @send-across-checked-type="
+      (checked, dataCount) => {
+        acrossCheckedType.isAcrossChecked = checked;
+        acrossCheckedType.dataCount = dataCount;
+      }
+    ">
     <template #tableOperations>
       <AddConfigs :show-add-existing-config-option="true" @refresh="refreshConfigList" />
+      <CountTips
+        :max="spaceFeatureFlags.RESOURCE_LIMIT.TmplSetTmplCnt"
+        :current="countOfTemplatesForCurrentPackage"
+        :is-temp="true"
+        :is-file-type="false" />
       <BatchOperationButton
         :space-id="spaceId"
         :configs="selectedConfigs"
         :current-template-space="currentTemplateSpace"
         pkg-type="pkg"
         :current-pkg="currentPkg as number"
+        :is-across-checked="acrossCheckedType.isAcrossChecked"
+        :data-count="acrossCheckedType.dataCount"
         @refresh="refreshConfigList"
         @moved-out="handleMovedOut" />
     </template>
   </CommonConfigTable>
 </template>
 <script lang="ts" setup>
-  import { ref } from 'vue';
+  import { ref, watch } from 'vue';
   import { storeToRefs } from 'pinia';
   import useGlobalStore from '../../../../../../store/global';
   import useTemplateStore from '../../../../../../store/template';
@@ -31,13 +46,18 @@
   import CommonConfigTable from './common-config-table.vue';
   import AddConfigs from '../operations/add-configs/add-button.vue';
   import BatchOperationButton from '../operations/batch-operations/batch-operation-btn.vue';
+  import CountTips from '../../../../service/detail/config/components/count-tips.vue';
 
-  const { spaceId } = storeToRefs(useGlobalStore());
+  const { spaceId, spaceFeatureFlags } = storeToRefs(useGlobalStore());
   const templateStore = useTemplateStore();
-  const { currentTemplateSpace, currentPkg } = storeToRefs(templateStore);
+  const { currentTemplateSpace, currentPkg, countOfTemplatesForCurrentPackage } = storeToRefs(templateStore);
 
   const configTable = ref();
   const selectedConfigs = ref<ITemplateConfigItem[]>([]);
+  const acrossCheckedType = ref<{ isAcrossChecked: boolean; dataCount: number }>({
+    isAcrossChecked: false,
+    dataCount: 0,
+  });
 
   const getConfigList = (params: ICommonQuery) => {
     console.log('Package Config List Loading', currentTemplateSpace.value);
@@ -64,5 +84,8 @@
       state.needRefreshMenuFlag = true;
     });
   };
+  watch(acrossCheckedType.value, () => {
+    console.log(acrossCheckedType.value, '+++++++++++++++++++++++');
+  });
 </script>
 <style lang="scss" scoped></style>

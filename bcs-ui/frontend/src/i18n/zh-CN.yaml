@@ -1,8 +1,11 @@
 bcs:
-  newVersion: '有版本更新, 是否刷新界面'
   preVersion: 返回旧版
+  newVersion:
+    title: 资源更新提醒
+    p1: 服务器端资源文件已经更新，请刷新页面获取最新资源，以免前端页面执行失败，造成困扰
+    p2: 点击确定将刷新页面，请注意保存数据
   TKEx:
-    title: TKEx-IEG 容器平台
+    title: 容器管理平台
     welcome: 欢迎使用 TKEx-IEG 容器平台
     article1: TKEx-IEG 是公司 K8S Oteam 指定的 IEG 容器服务平台。
     article2: TKEx-IEG 依托于 TKE，聚焦打造游戏一站式微服务部署治理方案，并基于 IEG 各类游戏的特点，提供游戏特色的容器管理服务。
@@ -14,11 +17,13 @@ bcs:
   cluster:
     share: 共享集群
     managed: 托管集群
+    managed1: 托管集群
     selfDeployed: 独立集群
     federation: 联邦集群
     kubeConfig: kubeConfig导入
     cloud: 云凭证导入
     platform: 平台创建
+    machine: 控制面服务器导入
   msg:
     emptyHostResource: 您在当前业务下没有主机资源，请联系业务运维
     notDevOps: 您不是当前项目绑定业务的运维人员，请联系业务运维人员
@@ -57,6 +62,11 @@ blueking:
   help: 帮助
   contact: 联系我们
   bk: 蓝鲸容器助手
+  aiScriptsAssistant:
+    desc: 询问AI小鲸
+    errTips: 询问AI小鲸解读报错信息
+    loading: 正在思考中
+    breakLoading: 聊天内容已中断
 k8s:
   namespace: 命名空间
   label: 标签
@@ -92,7 +102,6 @@ k8s:
       True 值
 nav:
   dashboard: 资源视图
-  namespace: 命名空间
   workload: 工作负载
   configuration: 配置
   storage: 存储
@@ -117,6 +126,7 @@ nav:
   monitor: 容器监控
   network: 网络
   cloudToken: 云凭证
+  templateFile: 模板文件
 iam:
   title:
     perms: 该操作需要以下权限
@@ -223,9 +233,11 @@ generic:
       network: 网络错误
       system: 系统异常
       data: 获取数据失败
+      import: 导入失败
     warning:
       '403': 无权限操作
       '404': 页面不存在
+      invalid: 请输入合法的值
     success:
       ok: 操作成功
       copy: 复制成功
@@ -250,6 +262,7 @@ generic:
       searchEmpty:
         text: 搜索结果为空
         subTitle: '可以尝试 调整关键词 或{action}'
+      noMatchLabel: 暂无匹配标签
     info:
       tips: 提示
       refreshAuth: 当前操作有权限，请刷新界面
@@ -274,6 +287,7 @@ generic:
     command: 多个命令用空格分隔，例如/bin/bash &quot;-c&quot
     searchIp: '输入IP搜索, 多个IP用逗号或空格隔开'
   button:
+    clone: 克隆
     resetSearch: 调整筛选条件
     validate: 校验
     confirm: 确定
@@ -325,10 +339,13 @@ generic:
     query: 查询
     create: 创建
     submit: 提交
-    reload: 立即刷新
     copyAll: 复制全部
     retry: 重试
     skip: 跳过
+    export: 导出
+    know: 我知道了
+    confirmSave: 确定保存
+    detail: 详情
   label:
     key: 键
     value: 值
@@ -355,6 +372,7 @@ generic:
     createdBy: 创建人
     createdBy1: 创建者
     updator: 更新人
+    updatedAt: 更新时间
     updator1: 更新者
     cluster: 集群
     cluster1: 所属集群
@@ -379,6 +397,10 @@ generic:
     stop: 停止
     basicConfig: 基本配置
     abnormal: 异常
+    source: 来源
+    batchSetting: '批量设置 {0}'
+    resourceName: 资源名称
+    resourceID: 资源ID
   status:
     part_failure: 部分失败
     support: 支持
@@ -426,6 +448,7 @@ generic:
     required: 必填项
     labelValueEmpty: 标签值不能为空
     labelKey: 仅支持字母，数字和字符(-_./)
+    SpeciaLabelKey: 输入无效，请确保您的输入符合Kubernetes标签格式
     annotations: 仅支持字母，数字，空格和字符(-_./)
     label: 标签必须由字母数字字符、连字符、下划线或点组成
     required1: taints不能有空字段
@@ -437,9 +460,12 @@ generic:
     cidr: CIDR格式错误，请重新输入，如：10.0.0.0/8
     cidrConflict: 'CIDR与 {cidr} 冲突，请重新输入'
     fieldRequired: '{0} 必填'
+    fieldRepeat: '{0} 重复'
+    clusterName: 集群名称只能包含数字、字母、中划线(-)、下划线(_)，且开头必须是数字或字母
   title:
     createPublicCluster: 新建公有云集群
-    curVersion: 当前版本
+    diffVersion: 线上版本
+    curVersion: 待上线
     basicInfo: 基础信息
     basicInfo1: 基本信息
     preview: 预览
@@ -530,6 +556,7 @@ cluster:
     setClusterVar: 设置变量
     skipTask: 确认跳过当前步骤
     retryTask: 确认重试任务
+    opRecord: 操作记录
   button:
     useSharedCluster: 使用共享集群
     addCluster: 添加集群
@@ -575,6 +602,7 @@ cluster:
     importCategory: 添加方式
     maxPodNum: Pod IP数量上限
     clusterLabel: 集群标签
+    provider: 提供商
   status:
     unknown: 未知集群状态
     importFailed: 导入失败
@@ -607,6 +635,11 @@ cluster:
         title: 公有云集群
         subTitle: 实现多云集群统一管理，降低业务管理成本
         desc: 目前支持腾讯云、亚马逊云、谷歌云、微软云、华为云五种云服务商集群创建
+        importDesc: 目前支持腾讯云、亚马逊云、谷歌云、微软云、华为云五种云服务商集群导入
+      bkSops:
+        title: 控制面服务器导入
+        subTitle: 在控制面主机上执行标准运维流程导入任意外部集群
+        desc: 通过在控制面主机上执行标准运维流程，在集群中安装Agent以实现外部集群的纳管
     label:
       system: 操作系统
       containerRuntime: 运行时组件
@@ -676,9 +709,9 @@ cluster:
         maxNodePodNum:
           text: 单节点Pod数量上限
           desc: 单节点Pod数量上限一旦分配后将无法调整，请谨慎评估后再填写
-        article3: 集群可添加节点数（包含Master节点与Node节点）= (IP数量 - Service的数量) / 单节点Pod数量上限
         article1: '容器网络资源有限，请合理分配，当前容器网络配置下，集群最多可以添加 {count} 个节点'
         article2: '当容器网络资源超额使用时，会触发容器网络自动扩容，扩容后集群最多可以添加 {count} 个节点'
+        article3: 集群可添加节点数（包含Master节点与Node节点）= (IP数量 - Service的数量) / 单节点Pod数量上限
       networkMode:
         text: 网络模式
         cni:
@@ -695,6 +728,7 @@ cluster:
       cpuQuota: CPU配额(核)
       memQuota: 内存配额(GiB)
       importType: 导入方式
+      title: 导入集群 - kubeconfig 集群
       cloudToken: 云凭证
       kubeConfig: 集群kubeconfig
       network:
@@ -708,6 +742,7 @@ cluster:
           bcs-apiserver-proxy 以 daemonset 形式部署在 Kubernetes 集群中，利用 IPVS 通过虚拟
           IP（VIP）实现集群内组件到 APIserver 的反向代理，并自动发现控制面节点 IP 以维护 IPVS
           规则，确保部分控制面节点故障时集群正常运行。
+      role: 集群服务角色
     msg:
       managedClusterInfo: 创建托管集群必须添加至少一个节点，以运行必要的服务
       independentClusterInfo:
@@ -738,6 +773,40 @@ cluster:
       createCloudToken: 新增凭证
       fileImport: 文件导入
       textKubeConfig: 可用性测试
+    aws:
+      securityGroup:
+        text: 安全组
+        vpcLink: '选择将应用到在您的控制平面子网中创建的 EKS 托管弹性网络接口的安全组。 要创建新的安全组，请转到 {0}  中的相应页面。'
+        vpcMaster: VPC 控制台
+      cidrTips:
+        tips1: 不允许0.0.0.0/0
+        tips2: cidr不合法
+      nodePool: 添加节点池
+      editNodePool: 编辑节点池
+      cidrWhitelist: CIDR白名单
+      label:
+        defaultNodePool: 默认节点池
+        skipOrNot: 是否跳过
+      validate:
+        subnet: 节点池子网不能为空
+      runtime:
+        extended:
+          label: 已扩展
+          text: >-
+            此选项在发布之日起 26 个月内支持 Kubernetes 版本。扩展支持期需要额外支付每小时的费用，该费用在标准支持期结束后开始。
+            扩展支持结束后，您的集群将自动升级到下一个版本。
+        standard:
+          label: 标准
+          text: 此选项在发布之日起 14 个月内支持 Kubernetes 版本。没有额外费用。标准支持结束后，您的集群将自动升级到下一个版本。
+      tips:
+        subnetEmpty: 子网为空，请先选择子网
+        awsDesc: Amazon VPC CNI ：AWS 的网络插件，可以在集群内启用 Pod 联网。
+        awsLink: Amazon VPC CNI功能概述
+    azure:
+      securityGroup:
+        text: 安全组
+        vpcLink: '选择将应用到在您的控制平面子网中创建的 AKS 托管弹性网络接口的安全组。 要创建新的安全组，请转到 {0}  中的相应页面。'
+        vpcMaster: VPC 控制台
   detail:
     title:
       overview: 集群总览
@@ -862,6 +931,8 @@ cluster:
       validate:
         name: 名称不超过255个字符，仅支持中文、英文、数字、下划线，分隔符(-)及小数点
         nodeQuotaMaxSize: '节点配额上限为{maximum}'
+        nodeCountsMaxSize: 节点数量不能大于节点配额
+        minNodes: 节点数要大于0
       label:
         nameAndID: 节点池名称 (ID)
         nodeQuota: 节点配额
@@ -870,6 +941,7 @@ cluster:
         status: 节点池状态
         name: 节点池名称
         detail: 查看节点池详情
+        serviceRole: IAM角色
       title:
         nodeConfig: 节点配置
         initConfig: 初始化配置
@@ -941,6 +1013,12 @@ cluster:
             SSD: 超高IO云硬盘
             GPSSD: 通用性SSD云硬盘
             ESSD: 极速IO云硬盘
+            gp3: 通用型SSD(gp3)
+            gp2: 通用型SSD(gp2)
+            io2: 预调配IOPS SSD(io2)
+            io1: 预调配IOPS SSD(io1)
+            st1: 高吞吐量HDD(st1)
+            sc1: 吞吐量优化型Cold HDD(sc1)
           disk:
             system: 系统盘
             data: 数据盘
@@ -971,9 +1049,11 @@ cluster:
           title: 支持子网
           desc: 内部上云环境根据集群所在VPC由产品自动分配可用子网，尽可能的把集群内的节点分配在不同的可用区，避免集群节点集中在同一可用区
           placeholder: 系统自动分配
+          validate: 请选择至少两个不同可用区的子网
           label:
             subnetID: 子网ID
             subnetName: 子网名称
+            zone: 可用区
             remainIp: 剩余IP数
             unUsedReason:
               text: 不可用原因
@@ -986,6 +1066,14 @@ cluster:
         runtimeVersion:
           title: 运行时版本
           desc: 运行时版本使用TKE集群配置，暂不支持修改
+        dockerGraphPathDefault:
+          desc: 容器目录使用集群配置，暂不支持修改
+        containerRuntimeDefault:
+          title: 运行时组件
+          desc: 运行时组件使用集群配置，暂不支持修改
+        runtimeVersionDefault:
+          title: 运行时版本
+          desc: 运行时版本使用集群配置，暂不支持修改
         imageProvider:
           title: 镜像提供方
           desc: 镜像提供方与操作系统使用TKE集群设置，暂不支持修改
@@ -1174,6 +1262,8 @@ cluster:
       retry: 失败重试
       setLabel: 设置标签
       setTaint: 设置污点
+      addLabel: 添加标签
+      addTaint: 添加污点
       copy:
         text: 复制
         checkedIP: 复制勾选IP
@@ -1181,6 +1271,8 @@ cluster:
       cancelSelectAll: 取消选择所有数据
       delete:
         subTitle: '确认是否删除 {ip} 等 {num} 个节点'
+      saveSetting: 变动预览
+      gotIt: 我知道了
     msg:
       labelDesc: 标签有助于整理你的资源
       selectedData: '已选择 {num} 条数据'
@@ -1194,8 +1286,20 @@ cluster:
       disableImportClusterAction: 导入集群，节点管理功能不可用
       disableImportClusterAddNode: 导入集群不支持从已有服务器添加节点
       hasNotNodePoolNode: 选择的节点中有非节点池添加的节点
+      disableBatchSettingNodes: 选中的节点中有非正常状态的节点
+      undo: 恢复
+      batchUndo: 批量恢复
+      remove: 移除
+      batchRemove: 批量移除
+      batchEdit: 批量设置
+      copyNodeIP: 一键复制节点IP
+      note: 注意：NoExecute污点可能驱逐节点上的所有Pod，请谨慎操作。
     placeholder:
       searchNode: 搜索IP、标签、污点、注解、状态、可用区、节点来源、所属节点池
+      inputKey: 请输入key
+      inputValue: 请输入value
+      locationTag: 定位标签
+      locationTaint: 定位污点
     title:
       confirmAddNode: 确定添加节点
       confirmReAddNode: 确认重新添加节点
@@ -1204,6 +1308,12 @@ cluster:
       batchSetLabel:
         text: 批量设置标签
         desc: 批量设置只展示相同Key的标签
+      batchSetTaint:
+        text: 批量设置污点
+      tableSetting: 表格设置
+      fieldDisplaySettings: 表格显示设置
+      nodeSaveError: 部分节点保存失败
+      tabelTitle: 以下节点异常，在此次批量设置操作中失败：
     label:
       podCounts: Pod数量
       index: 序号
@@ -1213,6 +1323,9 @@ cluster:
         text: 节点来源
         add: 手动添加
       nodePool: 所属节点池
+      thisAddition: 本次添加
+      thisRemoval: 本次移除
+      nodeNum: '本次选择 {nodeNum} 个节点，本次批量编辑标签内容如下：'
     metric:
       cpuUsageAndRequestUsage: CPU使用率/装箱率
       memUsageAndRequestUsage: 内存使用率/装箱率
@@ -1235,6 +1348,9 @@ cluster:
         selectAllNs: 全部命名空间
         kernel: 内核
         runtime: 运行时
+  operateRecord:
+    placeholder:
+      searchRecord: 搜索资源名称、资源ID、状态、发起者
 deploy:
   helm:
     title:
@@ -2232,7 +2348,6 @@ logCollector:
     name: '仅支持英文, 数字和下划线, 且长度5~30字符'
     logPath: 仅支持绝对路径
   msg:
-    logCollector: 支持容器标准输出日志和文件路径日志的采集设置。日志采集服务已升级，旧版本规则建议「生成新规则」并及时清理。
     oldRuleToNewRule: '生成新规则后，新旧版本规则采集到的日志数据将在 {0} 后完全同步，届时系统将自动为您清理旧规则。'
     oldRuleFlag: 旧
     notEnable: 当前集群日志采集组件未启用
@@ -2457,6 +2572,19 @@ importGoogleCloud:
   clusterRegion:
     zones: 可用区级集群
     regions: 区域级集群
+importBkSopsCloud:
+  title: 导入集群－控制面服务器
+  label:
+    clusterName: 集群名称
+    controlPanel: 控制面
+    addServer: 添加服务器
+    advancedParameters: 高级参数
+    desc: 集群描述
+  button:
+    import: 导入
+  message:
+    nodeTips: 通过集群master节点导入，并可以执行kubectl命令
+    errorAgent: 导入节点Agent异常
 azureCloud:
   button:
     create: 新建凭证
@@ -2571,6 +2699,10 @@ azureCA:
       （默认）”有诸多限制，蓝鲸组件依赖这些被限制的功能，目前只支持操作系统“包含 Containerd 的 Ubuntu
       (ubuntu_containerd)”
     dataDisk: 购买数据盘后添加节点后需要手工格式化与挂载磁盘
+  password:
+    set: 设置密码
+    confirm: 确认密码
+awsCA:
   password:
     set: 设置密码
     confirm: 确认密码
@@ -2762,6 +2894,7 @@ tke:
     supportCidrList: '仅支持 {0} 之间网段'
     minIpNum2: '容器网段不能少于 {0} 个 IP, 请重新输入'
     formErr: 表单填写有误，请修改
+    leastTwoDifferentAZs: 指定的子网必须至少位于两个不同的可用区中
   configRec:
     l100:
       text: 节点数1~100
@@ -2819,7 +2952,13 @@ tkeCa:
       yunti: 云梯资源池(平台提供)
       self: 自建资源池
 provider:
-  tencentPublicCloud: 腾讯云公有云
+  tencentyun: 腾讯自研云
+  huaweiyun: 华为云
+  yamaxunyun: 亚马逊云
+  gugeyun: 谷歌云
+  weiruanyun: 微软云
+  blueKingyun: K8S原生
+  tencentPublicCloud: 腾讯公有云
 container:
   label:
     restartCnt: 重启次数
@@ -2828,3 +2967,112 @@ container:
     finishedAt: 退出时间
     exitCode: 退出码
     reason: 原因
+templateFile:
+  title:
+    file: 模板文件
+    createVersion: 创建版本
+    createSpace: 新建文件夹
+    rename: 重命名
+    versionManage: 版本管理
+    modifyMetadata: 修改基本信息
+    editNewVersion: 编辑新版本
+    deployFile: 部署模板文件
+    deploySetting: 部署设置
+    deployReview: 部署预览
+    disableYamlToForm: 无法切换模式
+    fileList: 文件列表
+    import: 导入文件包
+    clone: 克隆
+  button:
+    formMode: 表单模式
+    yamlMode: YAML模式
+    rename: 重命名
+    createFile: 新建模板文件
+    delete: 删除
+    deploy: 部署
+    previewAndDeploy: 预览并部署
+    versionManage: 版本管理
+    confirmDeploy: 确认部署
+    AddToFavorites: 收藏文件夹
+    RemoveFromFavorites: 取消收藏
+    import: 导入文件包
+    export: 导出全部
+    exportFolder: 导出文件夹
+  placeholder:
+    searchFile: 模板文件名称/类型/版本/更新人
+    searchVersion: 版本号/版本日志/更新人
+    searchSpace: 搜索文件夹
+  label:
+    name: 名称
+    templateName: 模板名称
+    resourceType: 类型
+    latestVersion: 最新版本
+    spaceName: 文件夹名称
+    kindType: 资源类型
+    workload: 工作负载
+    versionDesc: 版本日志
+    desc: 模板描述
+    semver:
+      major: 重大版本
+      minor: 次版本
+      patch: 修正版本
+      preRelease: 预发布版本
+    semverNo: 版本号
+    semverDesc: 版本日志
+    rebaseVersion: 选择载入版本
+    version: 版本号
+    versionType: 版本类型
+    fileVersion: 模板文件版本
+    params: 入参
+    otherParams: 其他变量
+    byCluster: 按集群
+    versionDiff: 版本对比
+    untitled: 未命名
+  tips:
+    disableYamlToFormReason: '源码文件中，{0}，请继续使用源码模式编辑模板或修改再尝试'
+    preKind: 上一个类型
+    nextKind: 下一个类型
+    bookmark: 收藏文件夹
+    unbookmark: 取消收藏
+    uploadTips: '支持.tgz, .tar.gz类型压缩包，文件小于{0}M'
+    createSpace: 新建文件夹
+  tag:
+    draft: 草稿
+    baseOn: 基于
+    latestUpdate: 最新更新
+templateSet:
+  title:
+    set: 模板集
+    versionManage: 版本管理
+    addTemplateFile: 添加模板文件
+    modifyMetadata: 修改基本信息
+  label:
+    name: 模板名称
+    appVersion: 应用版本
+    desc: 模板集描述
+    templateFile: 模板文件
+    setVersion: 模板版本
+    key: 关键字
+    label: 分类标签
+    versionNo: 版本号
+    set: 模板集
+  button:
+    addFile: 添加模板文件
+    existFile: 选择已有模板文件
+    createFile: 新建模板文件
+    addNow: 立即添加
+    versionManage: 版本管理
+    deploy: 去部署
+  placeholder:
+    searchFile: 模板名称/资源类型
+    searchSet: 模板集名称/版本/仓库/分类标签/关键字/更新人/更新时间
+    searchVersion: 版本号/版本日志/更新人
+  tips:
+    emptyTemplateFile: 暂无模板文件
+    listView: 列表视图
+    cardView: 卡片视图
+    cantDeploy: 无法部署：无任何已保存版本
+diff:
+  delete: 删除
+  change: 变化
+  add: 新增

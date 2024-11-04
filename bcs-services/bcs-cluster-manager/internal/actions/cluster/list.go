@@ -95,12 +95,19 @@ func (la *ListAction) validate() error {
 
 // getSharedCluster shared cluster
 func (la *ListAction) getSharedCluster() error {
+	conds := make([]*operator.Condition, 0)
+
 	condM := make(operator.M)
 	condM["isshared"] = true
 	condCluster := operator.NewLeafCondition(operator.Eq, condM)
-	condStatus := operator.NewLeafCondition(operator.Ne, operator.M{"status": common.StatusDeleted})
+	conds = append(conds, condCluster)
 
-	branchCond := operator.NewBranchCondition(operator.And, condCluster, condStatus)
+	if !la.req.GetAll() {
+		condStatus := operator.NewLeafCondition(operator.Ne, operator.M{"status": common.StatusDeleted})
+		conds = append(conds, condStatus)
+	}
+
+	branchCond := operator.NewBranchCondition(operator.And, conds...)
 	clusterList, err := la.model.ListCluster(la.ctx, branchCond, &storeopt.ListOption{})
 	if err != nil && !errors.Is(err, drivers.ErrTableRecordNotFound) {
 		return err
@@ -108,6 +115,9 @@ func (la *ListAction) getSharedCluster() error {
 
 	clusterIDs := make([]string, 0)
 	for i := range clusterList {
+		if clusterList[i].GetProjectID() == la.req.ProjectID {
+			continue
+		}
 		la.clusterList = append(la.clusterList, shieldClusterInfo(&clusterList[i]))
 		clusterIDs = append(clusterIDs, clusterList[i].ClusterID)
 	}
@@ -134,9 +144,14 @@ func (la *ListAction) getSharedCluster() error {
 	return nil
 }
 
-// listCluster cluster list
-func (la *ListAction) listCluster() error {
-	getSharedCluster := true
+func (la *ListAction) filterClusterList() ([]cmproto.Cluster, bool, error) {
+	var (
+		sharedCluster = true
+		clusterList   []cmproto.Cluster
+		err           error
+	)
+
+	conds := make([]*operator.Condition, 0)
 
 	condM := make(operator.M)
 	if len(la.req.ClusterName) != 0 {
@@ -168,18 +183,32 @@ func (la *ListAction) listCluster() error {
 	}
 	if len(la.req.ExtraClusterID) != 0 {
 		condM["extraclusterid"] = la.req.ExtraClusterID
-		getSharedCluster = false
+		sharedCluster = false
 	}
 	if len(la.req.ClusterID) != 0 {
 		condM["clusterid"] = la.req.ClusterID
 	}
-
 	condCluster := operator.NewLeafCondition(operator.Eq, condM)
-	condStatus := operator.NewLeafCondition(operator.Ne, operator.M{"status": common.StatusDeleted})
+	conds = append(conds, condCluster)
 
-	branchCond := operator.NewBranchCondition(operator.And, condCluster, condStatus)
-	clusterList, err := la.model.ListCluster(la.ctx, branchCond, &storeopt.ListOption{})
+	if !la.req.All {
+		condStatus := operator.NewLeafCondition(operator.Ne, operator.M{"status": common.StatusDeleted})
+		conds = append(conds, condStatus)
+	}
+	branchCond := operator.NewBranchCondition(operator.And, conds...)
+
+	clusterList, err = la.model.ListCluster(la.ctx, branchCond, &storeopt.ListOption{})
 	if err != nil && !errors.Is(err, drivers.ErrTableRecordNotFound) {
+		return nil, sharedCluster, err
+	}
+
+	return clusterList, sharedCluster, nil
+}
+
+// listCluster cluster list
+func (la *ListAction) listCluster() error {
+	clusterList, sharedCluster, err := la.filterClusterList()
+	if err != nil {
 		return err
 	}
 
@@ -211,7 +240,7 @@ func (la *ListAction) listCluster() error {
 	}
 
 	// default return shared cluster
-	if getSharedCluster {
+	if sharedCluster {
 		err = la.getSharedCluster()
 		if err != nil {
 			blog.Errorf("ListCluster getSharedCluster failed: %v", err)
@@ -362,7 +391,7 @@ func (la *ListProjectClusterAction) listProjectCluster() error {
 	la.resp.ClusterExtraInfo = returnClusterExtraInfo(la.model, clusterList)
 
 	// get shared cluster
-	sharedClusters, err := getSharedCluster(la.model)
+	sharedClusters, err := getSharedCluster(la.req.ProjectID, la.req.GetBizId(), la.model)
 	if err != nil {
 		blog.Errorf("ListProjectClusterAction getSharedCluster failed: %v", err)
 	} else {
@@ -522,6 +551,7 @@ func (la *ListCommonClusterAction) listCluster() error {
 
 	clusterIDList := make([]string, 0)
 	for i := range clusterList {
+		// vcluster 使用的共享集群
 		if la.req.GetShowVCluster() {
 			extra := clusterList[i].GetExtraInfo()
 			_, ok := extra[common.ShowSharedCluster]
@@ -530,6 +560,14 @@ func (la *ListCommonClusterAction) listCluster() error {
 			}
 		}
 
+		// 用户共享集群
+		if clusterList[i].GetSharedRanges() != nil &&
+			(len(clusterList[i].GetSharedRanges().GetProjectIdOrCodes()) > 0 ||
+				len(clusterList[i].GetSharedRanges().GetBizs()) > 0) {
+			continue
+		}
+
+		// 平台共享集群
 		la.clusterList = append(la.clusterList, shieldClusterInfo(&clusterList[i]))
 		clusterIDList = append(clusterIDList, clusterList[i].ClusterID)
 	}
@@ -978,7 +1016,7 @@ func returnClusterExtraInfo(model store.ClusterManagerModel,
 }
 
 // getSharedCluster get shared clusters
-func getSharedCluster(model store.ClusterManagerModel) ([]*cmproto.Cluster, error) {
+func getSharedCluster(projectId string, bizId string, model store.ClusterManagerModel) ([]*cmproto.Cluster, error) {
 	condM := make(operator.M)
 	condM["isshared"] = true
 	condCluster := operator.NewLeafCondition(operator.Eq, condM)
@@ -993,7 +1031,26 @@ func getSharedCluster(model store.ClusterManagerModel) ([]*cmproto.Cluster, erro
 	clusters := make([]*cmproto.Cluster, 0)
 
 	for i := range clusterList {
-		clusters = append(clusters, shieldClusterInfo(&clusterList[i]))
+		if clusterList[i].ProjectID == projectId {
+			continue
+		}
+		// 是否共享给当前项目/业务
+		if clusterList[i].SharedRanges != nil && ((len(clusterList[i].SharedRanges.GetProjectIdOrCodes()) > 0 &&
+			utils.StringContainInSlice(projectId, clusterList[i].SharedRanges.ProjectIdOrCodes)) ||
+			(len(clusterList[i].SharedRanges.GetBizs()) > 0 &&
+				utils.StringContainInSlice(bizId, clusterList[i].SharedRanges.GetBizs()))) {
+			clusters = append(clusters, shieldClusterInfo(&clusterList[i]))
+
+			continue
+		}
+
+		// 共享给所有项目/业务
+		if clusterList[i].SharedRanges == nil || (clusterList[i].SharedRanges != nil &&
+			(len(clusterList[i].SharedRanges.GetProjectIdOrCodes()) == 0 &&
+				len(clusterList[i].SharedRanges.GetBizs()) == 0)) {
+			clusters = append(clusters, shieldClusterInfo(&clusterList[i]))
+			continue
+		}
 	}
 
 	return clusters, nil

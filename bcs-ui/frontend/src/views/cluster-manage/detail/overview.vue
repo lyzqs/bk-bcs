@@ -1,13 +1,13 @@
 <!-- eslint-disable max-len -->
 <template>
   <div>
-    <div class="flex overflow-hidden py-[20px] h-[360px]">
+    <div class="flex overflow-hidden pt-[20px] pb-[20px] h-[360px]">
       <!--CPU使用率-->
       <div class="flex-1 w-0 mr-[24px]">
         <div class="flex justify-between">
           <span class="text-[14px] font-bold">{{ $t('metrics.cpuUsage') }}</span>
           <div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center">
               <span class="text-[32px]">
                 {{ conversionPercentUsed(overviewData.cpu_usage.used, overviewData.cpu_usage.total) }}
               </span>
@@ -32,7 +32,7 @@
         <div class="flex justify-between">
           <span class="text-[14px] font-bold">{{ $t('metrics.memUsage') }}</span>
           <div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center">
               <span class="text-[32px]">
                 {{ conversionPercentUsed(overviewData.memory_usage.used_bytes, overviewData.memory_usage.total_bytes) }}
               </span>
@@ -53,11 +53,11 @@
         />
       </div>
       <!-- 磁盘容量(虚拟集群不展示磁盘信息) -->
-      <div class="flex-1 w-0" v-if="curCluster.clusterType !== 'virtual'">
+      <div class="flex-1 w-0" v-if="curCluster?.clusterType !== 'virtual'">
         <div class="flex justify-between">
           <span class="text-[14px] font-bold">{{ $t('metrics.diskUsage') }}</span>
           <div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center">
               <span class="text-[32px]">
                 {{ conversionPercentUsed(overviewData.disk_usage.used_bytes, overviewData.disk_usage.total_bytes) }}
               </span>
@@ -102,7 +102,7 @@
             </bk-popover>
           </span>
           <div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center">
               <span class="text-[32px]">
                 {{ conversionPercentUsed(overviewData.cpu_usage.request, overviewData.cpu_usage.total) }}
               </span>
@@ -145,7 +145,7 @@
             </bk-popover>
           </span>
           <div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center">
               <span class="text-[32px]">
                 {{
                   conversionPercentUsed(
@@ -171,11 +171,11 @@
         />
       </div>
       <!-- 磁盘IO(虚拟集群不展示磁盘信息) -->
-      <div class="flex-1 w-0" v-if="curCluster.clusterType !== 'virtual'">
+      <div class="flex-1 w-0" v-if="curCluster?.clusterType !== 'virtual'">
         <div class="flex justify-between">
           <span class="text-[14px] font-bold">{{ $t('metrics.diskIOUsage') }}</span>
           <div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center">
               <span class="text-[32px]">
                 {{ conversionPercentUsed(
                   overviewData.diskio_usage.used, overviewData.diskio_usage.total) }}
@@ -197,7 +197,7 @@
         />
       </div>
     </div>
-    <div class="flex overflow-hidden pb-[20px] h-[360px]" v-if="curCluster.clusterType !== 'virtual'">
+    <div class="flex overflow-hidden pb-[20px] h-[360px]" v-if="curCluster?.clusterType !== 'virtual'">
       <!--POD使用率-->
       <div class="flex-1 w-0 mr-[24px]">
         <div class="flex justify-between">
@@ -205,7 +205,7 @@
             {{ $t('metrics.podUsage') }}
           </span>
           <div>
-            <div class="flex justify-end">
+            <div class="flex justify-end items-center">
               <span class="text-[32px]">
                 {{ conversionPercentUsed(overviewData.pod_usage.used, overviewData.pod_usage.total) }}
               </span>
@@ -233,7 +233,7 @@
 <script lang="ts">
 import { computed, defineComponent, onMounted, ref, toRefs } from 'vue';
 
-import ClusterOverviewChart from './cluster-overview-chart.vue';
+import ClusterOverviewChart from './components/cluster-overview-chart.vue';
 
 import { formatBytes } from '@/common/util';
 import { useCluster, useProject } from '@/composables/use-app';
@@ -264,7 +264,7 @@ export default defineComponent({
   setup(props) {
     const { clusterId } = toRefs(props);
     const { clusterList } = useCluster();
-    const curCluster = computed(() => clusterList.value.find(item => item.clusterID === clusterId.value) || {});
+    const curCluster = computed(() => clusterList.value.find(item => item.clusterID === clusterId.value));
     const { projectCode } = useProject();
     const overviewData = ref<{
       cpu_usage: IUsageData

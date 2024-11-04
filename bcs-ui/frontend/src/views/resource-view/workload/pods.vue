@@ -137,12 +137,21 @@
           <bk-table-column label="Pod IPv6" min-width="200">
             <template #default="{ row }">{{handleGetExtData(row.metadata.uid, 'podIPv6') || '--'}}</template>
           </bk-table-column>
-          <bk-table-column label="Node" :resizable="false">
+          <bk-table-column label="Node">
             <template #default="{ row }">{{row.spec.nodeName || '--'}}</template>
           </bk-table-column>
-          <bk-table-column label="Age" sortable="custom" prop="createTime" :resizable="false">
+          <bk-table-column label="Age" sortable="custom" prop="createTime">
             <template #default="{ row }">
               <span>{{handleGetExtData(row.metadata.uid, 'age')}}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('generic.label.source')" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="handleGetExtData(row.metadata.uid, 'createSource') === 'Template'">
+                {{ `${handleGetExtData(row.metadata.uid, 'templateName') || '--'}:${
+                  handleGetExtData(row.metadata.uid, 'templateVersion') || '--'}` }}
+              </span>
+              <span v-else>{{ handleGetExtData(row.metadata.uid, 'createSource') }}</span>
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('generic.label.editMode.text')" width="100">

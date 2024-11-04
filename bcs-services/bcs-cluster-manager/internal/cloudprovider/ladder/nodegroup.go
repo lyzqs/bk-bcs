@@ -149,6 +149,11 @@ func (ng *NodeGroup) UpdateNodeGroup(
 	return task, nil
 }
 
+// RecommendNodeGroupConf recommends nodegroup configs
+func (ng *NodeGroup) RecommendNodeGroupConf(opt *cloudprovider.CommonOption) ([]*proto.RecommendNodeGroupConf, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}
+
 // GetNodesInGroup get all nodes belong to NodeGroup
 func (ng *NodeGroup) GetNodesInGroup(group *proto.NodeGroup, opt *cloudprovider.CommonOption) ([]*proto.Node, error) {
 	// just get from cluster-manager storage no more implementation
@@ -364,7 +369,7 @@ func (ng *NodeGroup) SwitchAutoScalingOptionStatus(scalingOption *proto.ClusterA
 }
 
 // CheckResourcePoolQuota check resource pool quota when revise group limit
-func (ng *NodeGroup) CheckResourcePoolQuota(group *proto.NodeGroup, scaleUpNum uint32) error {
+func (ng *NodeGroup) CheckResourcePoolQuota(group *proto.NodeGroup, scaleUpNum uint32) error { // nolint
 	cloud, err := cloudprovider.GetCloudByProvider(cloudName)
 	if err == nil && cloud.GetConfInfo().GetDisableCheckGroupResource() {
 		return nil
@@ -393,9 +398,10 @@ func (ng *NodeGroup) CheckResourcePoolQuota(group *proto.NodeGroup, scaleUpNum u
 
 	resourceZones := make([]string, 0)
 	for _, pool := range pools {
-		blog.Infof("cloud[%s] CheckResourcePoolQuota pool[%s] region[%s] zone[%s] instanceType[%s] poolTotal[%v] "+
-			"poolAvailable[%v] groupQuota[%v] groupUsed[%v]", cloudName, pool.PoolId, pool.Region, pool.Zone,
-			pool.InstanceType, pool.Total, pool.Available, pool.GroupQuota, pool.GroupUsed)
+		blog.Infof("cloud[%s] CheckResourcePoolQuota pool[%s] region[%s] zone[%s] instanceType[%s] "+
+			"poolTotal[%v] poolAvailable[%v] poolOversoldTotal[%v] poolOversoldAvailable[%v] groupQuota[%v] "+
+			"groupUsed[%v]", cloudName, pool.PoolId, pool.Region, pool.Zone, pool.InstanceType,
+			pool.Total, pool.Available, pool.OversoldTotal, pool.OversoldAvailable, pool.GroupQuota, pool.GroupUsed)
 
 		resourceZones = append(resourceZones, pool.Zone)
 	}
@@ -419,7 +425,7 @@ func (ng *NodeGroup) CheckResourcePoolQuota(group *proto.NodeGroup, scaleUpNum u
 			groupQuota int32
 		)
 		for i := range pools {
-			poolTotal += pools[i].Total
+			poolTotal += pools[i].OversoldTotal
 			groupQuota += int32(pools[i].GroupQuota)
 		}
 
@@ -444,7 +450,7 @@ func (ng *NodeGroup) CheckResourcePoolQuota(group *proto.NodeGroup, scaleUpNum u
 	// 检验配额是否充足
 	for i := range pools {
 		num, ok := zoneNum[pools[i].Zone]
-		if ok && num > 0 && (pools[i].GroupQuota+num) > int(pools[i].Total) {
+		if ok && num > 0 && (pools[i].GroupQuota+num) > int(pools[i].OversoldTotal) {
 			mulErrors.Append(fmt.Errorf("region[%s] zone[%s] instanceType[%s]",
 				group.GetRegion(), pools[i].Zone, group.GetLaunchTemplate().GetInstanceType()))
 		}

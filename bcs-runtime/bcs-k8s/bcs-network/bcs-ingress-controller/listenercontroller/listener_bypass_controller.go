@@ -15,6 +15,7 @@ package listenercontroller
 import (
 	"context"
 	"reflect"
+	"runtime/debug"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
@@ -48,10 +49,12 @@ type ListenerBypassReconciler struct {
 }
 
 // NewListenerBypassReconciler create ListenerBypassReconciler
-func NewListenerBypassReconciler(client client.Client, lbIDCache *gocache.Cache) *ListenerBypassReconciler {
+func NewListenerBypassReconciler(client client.Client, lbIDCache *gocache.Cache,
+	options *option.ControllerOption) *ListenerBypassReconciler {
 	return &ListenerBypassReconciler{
 		Client:        client,
 		monitorHelper: apiclient.NewMonitorHelper(lbIDCache),
+		Option:        options,
 	}
 }
 
@@ -88,10 +91,10 @@ func (lc *ListenerBypassReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 			if err := lc.Client.Get(context.TODO(), req.NamespacedName, li); err != nil {
 				return err
 			}
+			cpListener := li.DeepCopy()
+			cpListener.Finalizers = common.RemoveString(cpListener.Finalizers, constant.FinalizerNameUptimeCheck)
 
-			li.Finalizers = common.RemoveString(li.Finalizers, constant.FinalizerNameUptimeCheck)
-
-			return lc.Client.Update(context.TODO(), li)
+			return lc.Client.Update(context.TODO(), cpListener)
 		}); err != nil {
 			blog.Errorf("remove finalizer for listeners '%s/%s' failed, err: %s", listener.GetNamespace(),
 				listener.GetNamespace(), err.Error())
@@ -153,9 +156,10 @@ func (lc *ListenerBypassReconciler) ensureFinalizer(listener *networkextensionv1
 			return err
 		}
 
-		li.Finalizers = append(li.Finalizers, constant.FinalizerNameUptimeCheck)
+		cpListener := li.DeepCopy()
+		cpListener.Finalizers = append(cpListener.Finalizers, constant.FinalizerNameUptimeCheck)
 
-		return lc.Client.Update(context.TODO(), li)
+		return lc.Client.Update(context.TODO(), cpListener)
 	}); err != nil {
 		return err
 	}
@@ -167,7 +171,7 @@ func (lc *ListenerBypassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&networkextensionv1.Listener{}).
 		WithEventFilter(getListenerByPassPredicate()).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: lc.Option.ListenerBypassMaxConcurrent}).
 		Complete(lc)
 }
 
@@ -181,12 +185,13 @@ func (lc *ListenerBypassReconciler) updateListenerStatus(namespacedName k8stypes
 			}
 			return err
 		}
-		li.Status.UptimeCheckStatus = &networkextensionv1.UptimeCheckTaskStatus{
+		cpListener := li.DeepCopy()
+		cpListener.Status.UptimeCheckStatus = &networkextensionv1.UptimeCheckTaskStatus{
 			ID:     taskID,
 			Status: status,
 			Msg:    msg,
 		}
-		if err := lc.Client.Update(context.TODO(), li, &client.UpdateOptions{}); err != nil {
+		if err := lc.Client.Update(context.TODO(), cpListener, &client.UpdateOptions{}); err != nil {
 			blog.Errorf("update uptime_check status failed, err: %s", err.Error())
 			return err
 		}
@@ -197,9 +202,19 @@ func (lc *ListenerBypassReconciler) updateListenerStatus(namespacedName k8stypes
 // getListenerByPassPredicate filter listener events
 func getListenerByPassPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			newListener, okNew := e.ObjectNew.(*networkextensionv1.Listener)
-			oldListener, okOld := e.ObjectOld.(*networkextensionv1.Listener)
+		UpdateFunc: func(e event.UpdateEvent) (processed bool) {
+			defer func() {
+				if r := recover(); r != nil {
+					blog.Errorf("[panic] Listener predicate panic, info: %v, stack:%s", r,
+						string(debug.Stack()))
+					processed = true
+				}
+			}()
+
+			objectNew := e.ObjectNew.DeepCopyObject()
+			objectOld := e.ObjectOld.DeepCopyObject()
+			newListener, okNew := objectNew.(*networkextensionv1.Listener)
+			oldListener, okOld := objectOld.(*networkextensionv1.Listener)
 			if !okNew || !okOld {
 				return false
 			}

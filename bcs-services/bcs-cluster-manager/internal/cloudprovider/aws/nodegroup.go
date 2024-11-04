@@ -107,10 +107,14 @@ func (ng *NodeGroup) generateUpdateNodegroupConfigInput(group *proto.NodeGroup,
 	input := &eks.UpdateNodegroupConfigInput{
 		ClusterName:   &cluster,
 		NodegroupName: &group.CloudNodeGroupID,
-		Labels: &eks.UpdateLabelsPayload{
-			AddOrUpdateLabels: aws.StringMap(group.Labels),
-		},
 	}
+
+	if len(group.GetNodeTemplate().GetLabels()) > 0 {
+		input.Labels = &eks.UpdateLabelsPayload{
+			AddOrUpdateLabels: aws.StringMap(group.GetNodeTemplate().GetLabels()),
+		}
+	}
+
 	if group.AutoScaling != nil {
 		input.ScalingConfig = &eks.NodegroupScalingConfig{
 			MaxSize: aws.Int64(int64(group.AutoScaling.MaxSize)),
@@ -124,6 +128,76 @@ func (ng *NodeGroup) generateUpdateNodegroupConfigInput(group *proto.NodeGroup,
 	}
 
 	return input
+}
+
+// RecommendNodeGroupConf recommends nodegroup configs
+func (ng *NodeGroup) RecommendNodeGroupConf(opt *cloudprovider.CommonOption) ([]*proto.RecommendNodeGroupConf, error) {
+	if opt == nil {
+		return nil, fmt.Errorf("invalid request")
+	}
+
+	configs := make([]*proto.RecommendNodeGroupConf, 0)
+	config := generateNodeGroupConf()
+
+	mgr := api.NodeManager{}
+	serviceRoles, err := mgr.GetServiceRoles(opt, "nodeGroup")
+	if err != nil {
+		blog.Errorf("RecommendNodeGroupConf GetServiceRoles failed, %s", err.Error())
+		return nil, err
+	}
+	if len(serviceRoles) == 0 {
+		return nil, fmt.Errorf("RecommendNodeGroupConf GetServiceRoles failed, no valid EKS-Node-Role")
+	}
+	config.ServiceRoleName = serviceRoles[0].RoleName
+
+	insTypes, err := mgr.ListNodeInstanceType(cloudprovider.InstanceInfo{
+		Region: opt.Region,
+		Cpu:    8,
+		Memory: 16,
+	}, opt)
+	if err != nil {
+		return nil, fmt.Errorf("list node instance type failed, %s", err.Error())
+	}
+	if len(insTypes) == 0 {
+		return nil, fmt.Errorf("RecommendNodeGroupConf no valid instanceType for 8c16g")
+	}
+	config.InstanceProfile.InstanceType = insTypes[0].NodeType
+	configs = append(configs, config)
+
+	return configs, nil
+}
+
+func generateNodeGroupConf() *proto.RecommendNodeGroupConf {
+	return &proto.RecommendNodeGroupConf{
+		Name: "default",
+		InstanceProfile: &proto.InstanceProfile{
+			NodeOS:             "AL_X86_64",
+			InstanceChargeType: "POSTPAID_BY_HOUR",
+		},
+		HardwareProfile: &proto.HardwareProfile{
+			CPU: 8,
+			Mem: 16,
+			SystemDisk: &proto.DataDisk{
+				DiskType: "gp2",
+				DiskSize: "100",
+			},
+			DataDisks: []*proto.DataDisk{
+				{
+					DiskType: "gp2",
+					DiskSize: "100",
+				},
+			},
+		},
+		NetworkProfile: &proto.NetworkProfile{
+			PublicIPAssigned: false,
+		},
+		ScalingProfile: &proto.ScalingProfile{
+			DesiredSize: 2,
+			MaxSize:     10,
+			// 释放模式
+			ScalingMode: "Delete",
+		},
+	}
 }
 
 // GetNodesInGroup get all nodes belong to NodeGroup
@@ -189,7 +263,7 @@ func (ng *NodeGroup) CleanNodesInGroup(nodes []*proto.Node, group *proto.NodeGro
 }
 
 // UpdateDesiredNodes update nodegroup desired node
-func (ng *NodeGroup) UpdateDesiredNodes(desiredNode uint32, group *proto.NodeGroup,
+func (ng *NodeGroup) UpdateDesiredNodes(desired uint32, group *proto.NodeGroup,
 	opt *cloudprovider.UpdateDesiredNodeOption) (*cloudprovider.ScalingResponse, error) {
 	if group == nil || opt == nil || opt.Cluster == nil || opt.Cloud == nil {
 		return nil, fmt.Errorf("invalid request")
@@ -209,11 +283,21 @@ func (ng *NodeGroup) UpdateDesiredNodes(desiredNode uint32, group *proto.NodeGro
 		return nil, err
 	}
 	if len(taskList) != 0 {
-		return nil, fmt.Errorf("%d %s task(s) is still running", len(taskList), taskType)
+		return nil, fmt.Errorf("eks task(%d) %s is still running", len(taskList), taskType)
+	}
+
+	needScaleOutNodes := desired - group.GetAutoScaling().GetDesiredSize()
+
+	blog.Infof("cluster[%s] nodeGroup[%s] current nodes[%d] desired nodes[%d] needNodes[%s]",
+		group.ClusterID, group.NodeGroupID, group.GetAutoScaling().GetDesiredSize(), desired, needScaleOutNodes)
+
+	if desired <= group.GetAutoScaling().GetDesiredSize() {
+		return nil, fmt.Errorf("NodeGroup %s current nodes %d larger than or equel to desired %d nodes",
+			group.Name, group.GetAutoScaling().GetDesiredSize(), desired)
 	}
 
 	return &cloudprovider.ScalingResponse{
-		ScalingUp: desiredNode,
+		ScalingUp: needScaleOutNodes,
 	}, nil
 }
 

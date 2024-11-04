@@ -9,11 +9,10 @@ import {
   setNodeTaints as handleSetNodeTaints,
   taskDetail as taskDetailAPI,
   uncordonNodes } from '@/api/modules/cluster-manager';
-import store from '@/store';
-
-import { 
-  clusterAllNodeOverview
+import {
+  clusterAllNodeOverview,
 } from '@/api/modules/monitor';
+import store from '@/store';
 
 const { $bkMessage, $bkInfo } = Vue.prototype;
 
@@ -240,7 +239,7 @@ export default function useNode() {
     const data = await clusterAllNodeOverview({
       $projectCode: curProject.value.projectCode,
       $clusterId: clusterId,
-      node: nodes
+      node: nodes,
     }).catch(() => ({}));
     return data;
   };
@@ -253,6 +252,19 @@ export default function useNode() {
   // 设置节点污点
   const setNodeTaints = async (params: ILabelsAndTaintsParams<ITaintsItem>) => {
     const result = await handleSetNodeTaints(params).then(() => true)
+      .catch(() => false);
+    return result;
+  };
+  // 批量设置节点标签，返回data,以处理个别节点标签设置失败的情况
+  const batchSetNodeLabels = async (params: ILabelsAndTaintsParams<ILabelsItem>) => {
+    const result = await handleSetNodeLabels(params).then(data => data)
+      .catch(() => false);
+
+    return result;
+  };
+  // 设置节点污点，返回data,以处理个别节点污点设置失败的情况
+  const batchSetNodeTaints = async (params: ILabelsAndTaintsParams<ITaintsItem>) => {
+    const result = await handleSetNodeTaints(params).then(data => data)
       .catch(() => false);
     return result;
   };
@@ -284,6 +296,8 @@ export default function useNode() {
     retryTask,
     setNodeLabels,
     setNodeTaints,
+    batchSetNodeLabels,
+    batchSetNodeTaints,
     batchDeleteNodes,
     taskDetail,
     getAllNodeOverview,
